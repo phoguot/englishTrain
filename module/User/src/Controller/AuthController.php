@@ -25,7 +25,7 @@ class AuthController extends BaseController
     {
         // Đã đăng nhập rồi thì khỏi xem trang login.
         if ($this->auth->currentUserId() !== null) {
-            return $this->redirect()->toRoute('home');
+            return $this->redirect()->toRoute('dashboard');
         }
 
         $request = $this->getRequest();
@@ -35,7 +35,7 @@ class AuthController extends BaseController
             $errors = [];
             try {
                 if ($this->auth->attempt($post)) {
-                    return $this->redirect()->toRoute('home');
+                    return $this->redirect()->toRoute('dashboard');
                 }
 
                 $errors['login'] = 'Tên đăng nhập hoặc mật khẩu không đúng.';

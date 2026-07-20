@@ -8,7 +8,7 @@ use Application\Service\DashboardService;
 use Laminas\View\Model\ViewModel;
 
 /**
- * Dashboard trang chủ — lối vào chính theo từng vai trò.
+ * Dashboard sau đăng nhập — lối vào nghiệp vụ chính theo từng vai trò.
  * Chỉ gọi Service của module khác (không query thẳng). Xem module/Application/CLAUDE.md.
  */
 class IndexController extends BaseController

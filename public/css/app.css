@@ -335,6 +335,7 @@ svg {
   text-decoration: underline;
   text-underline-offset: 0.25em;
   box-shadow: none;
+  min-height: 100%;
 }
 
 .btn--danger {
@@ -1091,6 +1092,189 @@ body[data-role="student"] .topbar {
     grid-template-columns: minmax(10rem, 0.7fr) minmax(0, 1.3fr);
     align-items: center;
   }
+}
+
+/* Hallmark · macrostructure: Marquee Hero · genre: playful · theme: Hum · enrichment: none · nav: N9 · footer: Ft5
+ * context: audience=mọi người · use=đi tới đăng nhập khi chủ động chọn · tone=thân thiện, vui nhẹ
+ * Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · contrast: pass (40–41) · slop: pass (42–49) · mobile: pass (34, 49–57)
+ */
+.landing-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 4.75rem;
+  padding-inline: clamp(var(--space-md), 5vw, var(--space-2xl));
+  border-block-end: var(--rule-strong) solid var(--color-ink);
+  background: var(--color-paper);
+}
+
+.landing {
+  width: min(100%, 96rem);
+  margin-inline: auto;
+}
+
+.landing-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(17rem, 0.5fr);
+  min-height: calc(100dvh - 4.75rem);
+  border-block-end: var(--rule-strong) solid var(--color-ink);
+}
+
+.landing-hero__copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  padding: clamp(var(--space-xl), 7vw, var(--space-4xl)) clamp(var(--space-md), 5vw, var(--space-2xl));
+  background-color: var(--color-paper);
+  background-image: radial-gradient(circle at 1px 1px, var(--color-pattern) 1px, transparent 0);
+  background-size: 1.5rem 1.5rem;
+}
+
+.landing-hero h1 {
+  max-width: 10ch;
+  font-size: clamp(3.4rem, 9vw, 8.75rem);
+  line-height: 0.92;
+  letter-spacing: -0.075em;
+}
+
+.landing-hero__aside {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--space-xl);
+  padding: clamp(var(--space-xl), 5vw, var(--space-2xl));
+  border-inline-start: var(--rule-strong) solid var(--color-ink);
+  background: var(--color-paper);
+}
+
+.landing-hero__aside p {
+  color: var(--color-ink-2);
+  font-size: var(--text-md);
+  line-height: 1.55;
+}
+
+.landing-hero__aside .btn {
+  align-self: flex-start;
+  white-space: nowrap;
+}
+
+.landing-paths {
+  padding: clamp(var(--space-2xl), 8vw, var(--space-4xl)) clamp(var(--space-md), 5vw, var(--space-2xl));
+}
+
+.landing-section-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(16rem, 0.75fr);
+  gap: var(--space-xl);
+  align-items: end;
+  margin-block-end: var(--space-2xl);
+}
+
+.landing-section-head h2 {
+  font-size: var(--text-display-s);
+}
+
+.landing-section-head p {
+  color: var(--color-muted);
+  font-size: var(--text-md);
+}
+
+.landing-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+
+.landing-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 22rem;
+  padding: var(--space-xl);
+  border: var(--rule-strong) solid var(--color-ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--space-xs) var(--space-xs) 0 var(--color-ink);
+  transition: transform var(--dur-short) var(--ease-out), box-shadow var(--dur-short) var(--ease-out);
+}
+
+.landing-card--teacher { grid-column: span 5; background: var(--color-paper-2); }
+.landing-card--student { grid-column: span 4; background: var(--color-lavender-soft); }
+.landing-card--admin { grid-column: span 3; background: var(--color-coral-soft); }
+
+.landing-card__number {
+  align-self: flex-start;
+  padding: var(--space-2xs) var(--space-sm);
+  border: var(--rule-hair) solid var(--color-ink);
+  border-radius: var(--radius-round);
+  font-family: var(--font-label);
+  font-size: var(--text-xs);
+}
+
+.landing-card h3 {
+  margin-block-end: var(--space-sm);
+  font-size: var(--text-2xl);
+}
+
+.landing-card p { color: var(--color-ink-2); }
+
+.landing-card a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-block-start: var(--space-lg);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.landing-card a:hover,
+.landing-card a:focus-visible { text-decoration-thickness: var(--rule-strong); }
+.landing-card a:active { transform: translateY(var(--space-3xs)); }
+
+.landing-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  min-height: 7rem;
+  padding-inline: clamp(var(--space-md), 5vw, var(--space-2xl));
+  border-block-start: var(--rule-strong) solid var(--color-ink);
+  background: var(--color-paper-2);
+}
+
+@media (hover: hover) {
+  .landing-card:hover {
+    box-shadow: var(--space-sm) var(--space-sm) 0 var(--color-ink);
+    transform: translateY(calc(var(--space-2xs) * -1));
+  }
+}
+
+@media (max-width: 60rem) {
+  .landing-hero { grid-template-columns: minmax(0, 1fr); }
+  .landing-hero__aside { border-block-start: var(--rule-strong) solid var(--color-ink); border-inline-start: 0; }
+  .landing-card--teacher,
+  .landing-card--student,
+  .landing-card--admin { grid-column: span 12; min-height: 17rem; }
+}
+
+@media (max-width: 48rem) {
+  .landing-nav { min-height: 4.25rem; }
+  .landing-nav .brand__name { display: none; }
+  .landing-hero { min-height: auto; }
+  .landing-hero__copy { min-height: 66dvh; }
+  .landing-hero h1 { font-size: clamp(3.1rem, 17vw, 5rem); }
+  .landing-section-head { grid-template-columns: minmax(0, 1fr); }
+  .landing-footer { align-items: flex-start; flex-direction: column; }
+  .landing-footer { justify-content: center; padding-block: var(--space-xl); }
+}
+
+@media (max-width: 23.5rem) {
+  .landing-card a { font-size: var(--text-sm); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-card { transition-duration: var(--dur-micro); }
+  .landing-card:hover { transform: none; }
 }
 
 @media (min-width: 60rem) {

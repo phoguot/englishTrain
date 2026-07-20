@@ -1,0 +1,70 @@
+<?php
+/** @var Laminas\View\Renderer\PhpRenderer $this */
+?>
+<a class="skip-link" href="#noi-dung">Bỏ qua điều hướng</a>
+
+<header class="landing-nav">
+    <a class="brand" href="<?= $this->url('home') ?>" aria-label="EnglishTrain — Trang chủ">
+        <span class="brand__mark" aria-hidden="true">ET</span>
+        <span class="brand__name">EnglishTrain</span>
+    </a>
+    <a class="btn btn--outline" href="<?= $this->url('login') ?>">Đăng nhập</a>
+</header>
+
+<main class="landing" id="noi-dung">
+    <section class="landing-hero">
+        <div class="landing-hero__copy">
+            <p class="eyebrow">Lớp học tiếng Anh, gọn trong một nhịp</p>
+            <h1>Học có nhịp.<br>Dạy có dấu.</h1>
+        </div>
+        <div class="landing-hero__aside">
+            <p>
+                EnglishTrain giúp giáo viên giao bài, điểm danh và ghi nhận tiến bộ;
+                học sinh biết rõ việc cần làm và xem lại kết quả của mình.
+            </p>
+            <a class="btn" href="<?= $this->url('login') ?>">Đăng nhập để bắt đầu</a>
+        </div>
+    </section>
+
+    <section class="landing-paths" aria-labelledby="landing-paths-title">
+        <div class="landing-section-head">
+            <h2 id="landing-paths-title">Một nơi cho cả lớp cùng tiến.</h2>
+            <p>Mỗi vai trò nhìn thấy đúng công việc của mình, không phải lần tìm qua những màn hình thừa.</p>
+        </div>
+
+        <div class="landing-grid">
+            <article class="landing-card landing-card--teacher">
+                <span class="landing-card__number">01</span>
+                <div>
+                    <h3>Giáo viên</h3>
+                    <p>Quản lý lớp, giao bài, chấm điểm, điểm danh và viết report định kỳ.</p>
+                    <a href="<?= $this->url('login') ?>">Giáo viên đăng nhập <span aria-hidden="true">→</span></a>
+                </div>
+            </article>
+
+            <article class="landing-card landing-card--student">
+                <span class="landing-card__number">02</span>
+                <div>
+                    <h3>Học sinh</h3>
+                    <p>Làm bài, xem điểm, theo dõi chuyên cần và đọc nhận xét đã được công bố.</p>
+                    <a href="<?= $this->url('login') ?>">Học sinh đăng nhập <span aria-hidden="true">→</span></a>
+                </div>
+            </article>
+
+            <article class="landing-card landing-card--admin">
+                <span class="landing-card__number">03</span>
+                <div>
+                    <h3>Quản trị</h3>
+                    <p>Quản lý tài khoản, lớp học và theo dõi vận hành của hệ thống.</p>
+                    <a href="<?= $this->url('login') ?>">Quản trị đăng nhập <span aria-hidden="true">→</span></a>
+                </div>
+            </article>
+        </div>
+    </section>
+
+</main>
+
+<footer class="landing-footer">
+    <strong>Học từng chút, giỏi thêm mỗi ngày.</strong>
+    <span>EnglishTrain · Website quản lý lớp học tiếng Anh</span>
+</footer>

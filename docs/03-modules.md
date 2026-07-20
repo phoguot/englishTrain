@@ -76,10 +76,15 @@ Service: `ReportService` — khi render trang soạn report, gọi kèm
 
 ## module/Application
 - `BaseController` (auth + role check), layout Bootstrap 5, navbar theo role
-- `/` dashboard: admin thấy số lớp/giáo viên/học sinh active; teacher thấy lớp + tối đa 5 bài
+- `/` landing page công khai cho mọi người; chỉ dẫn tới `/login`, không tải dữ liệu nghiệp vụ
+- `/dashboard` sau đăng nhập: admin thấy số lớp/giáo viên/học sinh active; teacher thấy lớp + tối đa 5 bài
   chờ chấm; student thấy tối đa 5 bài sắp đến hạn và 5 bài đã chấm
 - `DashboardService` tổng hợp dữ liệu qua `UserService`, `ClassroomService`, `AssignmentService`;
   `IndexController` không tự query hoặc loop gọi Service theo từng lớp
+- `/system-logs` (GET, chỉ admin): tra cứu bảng `system_log` — exception không được xử lý,
+  ghi tự động từ listener `dispatch.error`/`render.error` (xem `module/Application/CLAUDE.md`).
+  Lọc theo `?level=error|warning|info`, hiển thị 100 dòng mới nhất, có stack trace trong
+  phần "Chi tiết kỹ thuật". `SystemLogController` → `SystemLogService` → `SystemLogMapper`.
 
 ## Thứ tự triển khai đề xuất (mỗi bước chạy được end-to-end)
 1. User + Auth + layout + dashboard rỗng

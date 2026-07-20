@@ -35,7 +35,7 @@ class SubmissionController extends BaseController
         } catch (ValidationException $e) {
             $assignmentId = (int) ($e->getContext()['assignmentId'] ?? 0);
             if ($assignmentId === 0) {
-                return $this->redirect()->toRoute('home');
+                return $this->redirect()->toRoute('dashboard');
             }
             $grading = $this->submissionService->getForGrading($assignmentId, (int) $this->currentUserId());
             $model = $this->getViewModel();

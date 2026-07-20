@@ -103,6 +103,29 @@ Index: UNIQUE (session_id, student_id), (student_id)
 
 Index: (student_id, status, published_at), (classroom_id), (teacher_id)
 
+## system_log
+Bảng ghi lỗi hệ thống (exception không được xử lý) — do module Application sở hữu.
+Ghi tự động từ listener `dispatch.error` / `render.error`; không module nghiệp vụ nào ghi tay.
+
+| Cột             | Kiểu                                   | Ghi chú                                    |
+|-----------------|----------------------------------------|--------------------------------------------|
+| id              | INT UNSIGNED AUTO_INCREMENT PK         |                                            |
+| level           | ENUM('error','warning','info') DEFAULT 'error' | mức độ                             |
+| message         | TEXT                                   | câu lỗi (message của exception)            |
+| exception_class | VARCHAR(255) NULL                      | FQCN của exception                         |
+| file            | VARCHAR(500) NULL                      | file nơi ném lỗi                           |
+| line            | INT UNSIGNED NULL                      | dòng nơi ném lỗi                           |
+| stack_trace     | MEDIUMTEXT NULL                        | trace dạng chuỗi                           |
+| request_method  | VARCHAR(10) NULL                       | GET/POST...                                |
+| request_uri     | VARCHAR(500) NULL                      | URL đang mở khi lỗi                        |
+| user_id         | INT UNSIGNED NULL                      | user đang đăng nhập (nếu có), index tới `user.id` |
+| ip              | VARCHAR(45) NULL                       | IPv4/IPv6                                  |
+
+Index: (created_at), (level, created_at), (user_id)
+
+Ghi chú: log là dữ liệu chẩn đoán, không phải nghiệp vụ — được phép xóa định kỳ bằng migration
+dọn dẹp khi đầy; không bảng nào tham chiếu tới `system_log.id`.
+
 ## Index phụ (đã có trong 0001_init.sql, ngoài các index ghi ở từng bảng)
 Mỗi cột liên kết (thay cho FK constraint) đều có index để join không quét bảng:
 - `classroom`: (`teacher_id`)

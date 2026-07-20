@@ -1,0 +1,121 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var Application\Model\SystemLog\SystemLogModel[] $logs
+ * @var ?string $level
+ * @var int $limit
+ */
+// Key '' = không lọc (key null của mảng PHP tự thành '' nên dùng '' ngay từ đầu cho rõ).
+$levelTabs = [
+    ''        => 'Tất cả',
+    'error'   => 'Lỗi',
+    'warning' => 'Cảnh báo',
+    'info'    => 'Thông tin',
+];
+$badgeClasses = [
+    'error'   => 'bg-danger',
+    'warning' => 'bg-warning text-dark',
+    'info'    => 'bg-info',
+];
+$levelLabels = [
+    'error'   => 'Lỗi',
+    'warning' => 'Cảnh báo',
+    'info'    => 'Thông tin',
+];
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow">System log</p>
+        <h1>Log lỗi hệ thống.</h1>
+        <p>Các exception không được xử lý, ghi tự động khi người dùng gặp trang lỗi.
+           Hiển thị tối đa <?= (int) $limit ?> dòng mới nhất.</p>
+    </div>
+    <div class="page-actions">
+        <div class="button-row">
+            <?php foreach ($levelTabs as $tabLevel => $tabLabel): ?>
+                <?php $active = ($level ?? '') === (string) $tabLevel; ?>
+                <a class="btn <?= $active ? '' : 'btn--quiet' ?>"
+                   href="<?= $this->url('system_logs', [], $tabLevel === '' ? [] : ['query' => ['level' => $tabLevel]]) ?>">
+                    <?= $this->escapeHtml($tabLabel) ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</div>
+
+<?php if ($logs === []): ?>
+    <section class="panel panel--tint">
+        <div class="panel__head"><h2>Không có log nào</h2></div>
+        <p class="muted">Hệ thống chưa ghi nhận lỗi nào<?= $level !== null ? ' ở mức độ đã lọc' : '' ?>. Đó là tin tốt.</p>
+    </section>
+<?php else: ?>
+    <section class="panel">
+        <div class="panel__head">
+            <h2>Danh sách lỗi</h2>
+            <span class="panel__meta"><?= count($logs) ?> dòng</span>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Thời điểm</th>
+                        <th scope="col">Mức độ</th>
+                        <th scope="col">Lỗi</th>
+                        <th scope="col">Ngữ cảnh</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($logs as $log): ?>
+                        <?php
+                        $logLevel = $log->getLevel();
+                        // FQCN dài — chỉ hiện tên class cuối cho gọn, FQCN đầy đủ nằm trong chi tiết.
+                        $exceptionClass = $log->getExceptionClass();
+                        $shortClass = $exceptionClass !== null
+                            ? substr((string) strrchr('\\' . $exceptionClass, '\\'), 1)
+                            : null;
+                        ?>
+                        <tr>
+                            <td data-label="Thời điểm"><?= $this->escapeHtml((string) $log->getCreatedAt()) ?></td>
+                            <td data-label="Mức độ">
+                                <span class="badge <?= $badgeClasses[$logLevel] ?? 'bg-secondary' ?>">
+                                    <?= $this->escapeHtml($levelLabels[$logLevel] ?? $logLevel) ?>
+                                </span>
+                            </td>
+                            <td data-label="Lỗi">
+                                <?php if ($shortClass !== null): ?>
+                                    <strong><?= $this->escapeHtml($shortClass) ?></strong><br>
+                                <?php endif; ?>
+                                <?= $this->escapeHtml($log->getMessage()) ?>
+                                <?php if ($log->getStackTrace() !== null || $log->getFile() !== null): ?>
+                                    <details class="mt-2">
+                                        <summary>Chi tiết kỹ thuật</summary>
+                                        <?php if ($exceptionClass !== null): ?>
+                                            <p class="muted mb-1"><?= $this->escapeHtml($exceptionClass) ?></p>
+                                        <?php endif; ?>
+                                        <?php if ($log->getFile() !== null): ?>
+                                            <p class="muted mb-1">
+                                                <?= $this->escapeHtml($log->getFile()) ?><?= $log->getLine() !== null ? ':' . (int) $log->getLine() : '' ?>
+                                            </p>
+                                        <?php endif; ?>
+                                        <?php if ($log->getStackTrace() !== null): ?>
+                                            <pre class="small overflow-auto"><?= $this->escapeHtml($log->getStackTrace()) ?></pre>
+                                        <?php endif; ?>
+                                    </details>
+                                <?php endif; ?>
+                            </td>
+                            <td data-label="Ngữ cảnh">
+                                <?php if ($log->getRequestMethod() !== null || $log->getRequestUri() !== null): ?>
+                                    <code><?= $this->escapeHtml(trim($log->getRequestMethod() . ' ' . $log->getRequestUri())) ?></code><br>
+                                <?php endif; ?>
+                                <span class="muted">
+                                    <?= $log->getUserId() !== null ? 'User #' . (int) $log->getUserId() : 'Chưa đăng nhập' ?>
+                                    <?= $log->getIp() !== null ? ' · ' . $this->escapeHtml($log->getIp()) : '' ?>
+                                </span>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </section>
+<?php endif; ?>

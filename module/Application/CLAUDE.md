@@ -1,6 +1,19 @@
 # Module Application
 
-Hạ tầng chung: `BaseController`, layout, navbar, dashboard. **Không sở hữu bảng nào.**
+Hạ tầng chung: `BaseController`, layout, navbar, dashboard. Sở hữu duy nhất bảng hạ tầng
+`system_log` (ghi lỗi hệ thống) — không sở hữu bảng nghiệp vụ nào.
+
+## Ghi lỗi hệ thống (`system_log`)
+- `Module::onBootstrap()` gắn listener vào `dispatch.error` + `render.error`: mọi exception
+  không được xử lý sẽ được `SystemLogService::logThrowable()` ghi vào bảng `system_log`
+  (kèm URL, method, user_id, IP, stack trace) trước khi user thấy trang lỗi chung.
+- `AccessDeniedException` / `NotFoundException` do BaseController bắt nên **không** vào log —
+  đó là luồng nghiệp vụ bình thường, không phải lỗi hệ thống.
+- Ghi log **không bao giờ được ném lỗi tiếp**: DB hỏng thì fallback `error_log()` của PHP.
+- Module nghiệp vụ **không** gọi `SystemLogService`/`SystemLogMapper` trực tiếp — cần báo lỗi
+  thì cứ ném exception, listener lo phần ghi.
+- Trang tra cứu: `/system-logs` (chỉ admin, chỉ đọc) — `SystemLogController`, lọc theo
+  `?level=`, 100 dòng mới nhất.
 
 Mọi module đều phụ thuộc vào đây → đổi ở đây ảnh hưởng toàn hệ thống. Sửa cẩn thận.
 
@@ -40,6 +53,7 @@ ném `AccessDeniedException`. Xem `Classroom\Controller\ClassroomController::ass
 - Layout là nơi duy nhất nạp CSS/JS chung. Không nhét `<script>` rời trong view con.
 
 ## Dashboard
+- `/` là landing page công khai; `/dashboard` mới là trang tổng quan có xác thực.
 - teacher: lớp mình phụ trách + bài **chờ chấm** (`submission.status = 'submitted'`).
 - student: bài sắp đến hạn (`published`, `deadline_at` gần) + bài **đã chấm** (`graded`).
 - admin: số liệu tổng.
