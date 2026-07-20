@@ -1,0 +1,16 @@
+<?php
+/** @var Laminas\View\Renderer\PhpRenderer $this */
+/** @var array<int,array{report:Report\Model\StudentReport\StudentReportModel,classroomName:string,teacherName:string}> $reports */
+?>
+<div class="page-head"><div class="page-head__copy"><p class="eyebrow">My reports</p><h1>Nhận xét của tôi.</h1><p>Các report giáo viên đã xuất bản.</p></div></div>
+<?php if ($reports === []): ?>
+    <section class="panel panel--tint"><div class="panel__head"><h2>Chưa có report</h2></div><p class="muted">Report đã xuất bản sẽ xuất hiện tại đây.</p></section>
+<?php else: ?>
+    <?php foreach ($reports as $row): $report = $row['report']; ?>
+        <article class="panel">
+            <div class="panel__head"><h2><?= $this->escapeHtml($row['classroomName']) ?> · <?= $this->escapeHtml((string) $report->getPeriodLabel()) ?></h2><span class="badge bg-success">Đã xuất bản</span></div>
+            <p class="muted">Giáo viên: <?= $this->escapeHtml($row['teacherName']) ?></p>
+            <div class="report-content"><?= $report->getContent() ?></div>
+        </article>
+    <?php endforeach; ?>
+<?php endif; ?>

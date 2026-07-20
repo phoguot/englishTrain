@@ -1,0 +1,19 @@
+<?php
+// Copy thanh local.php va dien thong tin that. local.php KHONG commit len git.
+declare(strict_types=1);
+
+return [
+    "db" => [
+        "database" => "english_train",
+        "username" => "root",
+        "password" => "",
+        "hostname" => "127.0.0.1",
+    ],
+    "r2" => [
+        "account_id" => "",
+        "access_key" => "",
+        "secret_key" => "",
+        "bucket" => "english-train",
+        "max_upload_mb" => 200,
+    ],
+];

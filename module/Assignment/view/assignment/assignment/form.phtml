@@ -1,0 +1,123 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var bool $isEdit
+ * @var int|null $editId
+ * @var array<string,mixed> $values
+ * @var array<string,string> $errors
+ * @var array<int, array{question:string,options:string[],correct_index:int}> $quizJson
+ * @var array<int, array<string,mixed>> $classrooms
+ */
+$action = $isEdit ? $this->url('assignment_edit', ['id' => $editId]) : $this->url('assignment_create');
+$deadlineValue = '';
+if (($values['deadline_at'] ?? '') !== '') {
+    $timestamp = strtotime((string) $values['deadline_at']);
+    $deadlineValue = $timestamp !== false ? date('Y-m-d\TH:i', $timestamp) : '';
+}
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow">Assignment</p>
+        <h1><?= $isEdit ? 'Sửa bài tập.' : 'Tạo bài tập.' ?></h1>
+        <p>Viết đề bài rõ ràng, chọn hạn nộp và trạng thái trước khi giao.</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn--outline"
+           href="<?= $this->url('assignments', [], ['query' => ['classroom' => (int) $values['classroom_id']]]) ?>">Quay lại</a>
+    </div>
+</div>
+
+<?php if (isset($errors['quiz'])): ?>
+    <div class="alert alert-danger" role="alert"><?= $this->escapeHtml($errors['quiz']) ?></div>
+<?php endif; ?>
+
+<form method="post" action="<?= $this->escapeHtmlAttr($action) ?>" class="panel form-grid">
+    <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+    <div class="field">
+        <label for="classroom_id">Lớp</label>
+        <select class="field__control" id="classroom_id" name="classroom_id" required
+                <?= isset($errors['classroom_id']) ? 'aria-invalid="true" aria-describedby="classroom-error"' : '' ?>>
+            <option value="">Chọn lớp</option>
+            <?php foreach ($classrooms as $classroom): ?>
+                <option value="<?= (int) $classroom['id'] ?>"
+                    <?= (int) $values['classroom_id'] === (int) $classroom['id'] ? 'selected' : '' ?>>
+                    <?= $this->escapeHtml($classroom['name']) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <span class="field__help<?= isset($errors['classroom_id']) ? ' field__help--error' : '' ?>" id="classroom-error">
+            <?= isset($errors['classroom_id']) ? $this->escapeHtml($errors['classroom_id']) : 'Chỉ hiển thị lớp bạn phụ trách.' ?>
+        </span>
+    </div>
+
+    <div class="field">
+        <label for="type">Loại bài</label>
+        <select class="field__control" id="type" name="type"
+                <?= isset($errors['type']) ? 'aria-invalid="true" aria-describedby="type-error"' : '' ?>>
+            <option value="essay" <?= $values['type'] === 'essay' ? 'selected' : '' ?>>Tự luận</option>
+            <option value="quiz" <?= $values['type'] === 'quiz' ? 'selected' : '' ?>>Trắc nghiệm</option>
+            <option value="video" <?= $values['type'] === 'video' ? 'selected' : '' ?>>Video</option>
+        </select>
+        <span class="field__help<?= isset($errors['type']) ? ' field__help--error' : '' ?>" id="type-error">
+            <?= isset($errors['type']) ? $this->escapeHtml($errors['type']) : 'Video hiện chưa hỗ trợ nộp trực tiếp.' ?>
+        </span>
+    </div>
+
+    <div class="field field--wide">
+        <label for="title">Tiêu đề</label>
+        <input class="field__control" type="text" id="title" name="title" maxlength="200"
+               value="<?= $this->escapeHtmlAttr((string) $values['title']) ?>" required
+               <?= isset($errors['title']) ? 'aria-invalid="true" aria-describedby="title-error"' : '' ?>>
+        <span class="field__help<?= isset($errors['title']) ? ' field__help--error' : '' ?>" id="title-error">
+            <?= isset($errors['title']) ? $this->escapeHtml($errors['title']) : 'Tiêu đề ngắn, cho học sinh biết ngay việc cần làm.' ?>
+        </span>
+    </div>
+
+    <div class="field field--wide">
+        <label for="description">Đề bài</label>
+        <textarea class="field__control" id="description" name="description" rows="5"><?= $this->escapeHtml((string) $values['description']) ?></textarea>
+        <span class="field__help">Nêu yêu cầu, độ dài và cách nộp bài.</span>
+    </div>
+
+    <div class="field">
+        <label for="deadline_at">Hạn nộp</label>
+        <input class="field__control" type="datetime-local" id="deadline_at" name="deadline_at"
+               value="<?= $this->escapeHtmlAttr($deadlineValue) ?>"
+               <?= isset($errors['deadline_at']) ? 'aria-invalid="true" aria-describedby="deadline-error"' : '' ?>>
+        <span class="field__help<?= isset($errors['deadline_at']) ? ' field__help--error' : '' ?>" id="deadline-error">
+            <?= isset($errors['deadline_at']) ? $this->escapeHtml($errors['deadline_at']) : 'Để trống nếu bài không giới hạn.' ?>
+        </span>
+    </div>
+
+    <div class="field">
+        <label for="status">Trạng thái</label>
+        <select class="field__control" id="status" name="status"
+                <?= isset($errors['status']) ? 'aria-invalid="true" aria-describedby="assignment-status-error"' : '' ?>>
+            <option value="draft" <?= $values['status'] === 'draft' ? 'selected' : '' ?>>Nháp — học sinh chưa thấy</option>
+            <option value="published" <?= $values['status'] === 'published' ? 'selected' : '' ?>>Đã giao</option>
+            <option value="closed" <?= $values['status'] === 'closed' ? 'selected' : '' ?>>Đã đóng</option>
+        </select>
+        <span class="field__help<?= isset($errors['status']) ? ' field__help--error' : '' ?>" id="assignment-status-error">
+            <?= isset($errors['status']) ? $this->escapeHtml($errors['status']) : 'Bản nháp chỉ giáo viên nhìn thấy.' ?>
+        </span>
+    </div>
+
+    <section id="quiz-section" class="field--wide panel panel--tint <?= $values['type'] === 'quiz' ? '' : 'd-none' ?>">
+        <div class="panel__head">
+            <h2>Câu hỏi trắc nghiệm</h2>
+            <button type="button" id="add-question" class="btn btn--outline">Thêm câu hỏi</button>
+        </div>
+        <div id="questions"></div>
+    </section>
+
+    <div class="field--wide button-row">
+        <button class="btn" type="submit"><?= $isEdit ? 'Lưu thay đổi' : 'Tạo bài tập' ?></button>
+        <a class="btn btn--quiet"
+           href="<?= $this->url('assignments', [], ['query' => ['classroom' => (int) $values['classroom_id']]]) ?>">Hủy</a>
+    </div>
+</form>
+
+<textarea id="existing-questions" class="d-none" aria-hidden="true"><?= $this->escapeHtml(json_encode(
+    $quizJson,
+    JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT,
+)) ?></textarea>

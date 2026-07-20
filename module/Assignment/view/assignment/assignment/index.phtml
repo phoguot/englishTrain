@@ -1,0 +1,113 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var string $role
+ * @var int $classroomId
+ * @var string $classroomName
+ * @var bool $canEdit
+ * @var array<int, array<string,mixed>> $assignments
+ */
+$isTeacher = $role === 'teacher';
+$typeLabels = ['essay' => 'Tự luận', 'quiz' => 'Trắc nghiệm', 'video' => 'Video'];
+$statusBadges = [
+    'draft'     => ['bg-secondary', 'Nháp'],
+    'published' => ['bg-success', 'Đã giao'],
+    'closed'    => ['bg-dark', 'Đã đóng'],
+];
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow">Assignment<?= $classroomName !== '' ? ' / ' . $this->escapeHtml($classroomName) : '' ?></p>
+        <h1>Bài tập.</h1>
+        <p><?= $isTeacher
+            ? 'Giao bài, theo dõi hạn nộp và đi thẳng đến những bài đang chờ chấm.'
+            : 'Xem đề bài, hạn nộp và kết quả của em trong lớp này.' ?></p>
+    </div>
+    <?php if ($canEdit): ?>
+        <div class="page-actions">
+            <a class="btn" href="<?= $this->url('assignment_create', [], ['query' => ['classroom' => $classroomId]]) ?>">
+                Tạo bài tập
+            </a>
+        </div>
+    <?php endif; ?>
+</div>
+
+<?php if ($isTeacher && !$canEdit): ?>
+    <div class="demo-note">Lớp đã lưu trữ. Bài tập được giữ ở chế độ chỉ đọc.</div>
+<?php endif; ?>
+
+<?php if ($assignments === []): ?>
+    <section class="panel panel--tint">
+        <div class="panel__head"><h2>Chưa có bài tập</h2></div>
+        <p class="muted"><?= $isTeacher ? 'Tạo bài đầu tiên cho lớp này.' : 'Giáo viên chưa giao bài nào.' ?></p>
+    </section>
+<?php else: ?>
+    <section class="panel">
+        <div class="panel__head">
+            <h2>Danh sách bài</h2>
+            <span class="panel__meta"><?= count($assignments) ?> bài</span>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Bài tập</th>
+                        <th scope="col">Loại</th>
+                        <th scope="col">Hạn nộp</th>
+                        <?php if ($isTeacher): ?>
+                            <th scope="col">Trạng thái</th>
+                            <th scope="col">Bài nộp</th>
+                        <?php else: ?>
+                            <th scope="col">Tình trạng</th>
+                            <th scope="col">Điểm</th>
+                        <?php endif; ?>
+                        <th scope="col">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($assignments as $assignment): ?>
+                        <tr>
+                            <td data-label="Bài tập"><strong><?= $this->escapeHtml($assignment['title']) ?></strong></td>
+                            <td data-label="Loại"><?= $this->escapeHtml($typeLabels[$assignment['type']] ?? $assignment['type']) ?></td>
+                            <td data-label="Hạn nộp">
+                                <?= $assignment['deadlineAt'] === null
+                                    ? 'Không hạn'
+                                    : $this->escapeHtml(date('d/m/Y · H:i', strtotime((string) $assignment['deadlineAt']))) ?>
+                            </td>
+                            <?php if ($isTeacher): ?>
+                                <?php [$badgeClass, $badgeText] = $statusBadges[$assignment['status']] ?? ['bg-secondary', $assignment['status']]; ?>
+                                <td data-label="Trạng thái"><span class="badge <?= $badgeClass ?>"><?= $this->escapeHtml($badgeText) ?></span></td>
+                                <td data-label="Bài nộp">
+                                    <?= (int) $assignment['submittedCount'] + (int) $assignment['gradedCount'] ?> /
+                                    <?= (int) $assignment['totalStudents'] ?>
+                                    <span class="muted">· <?= (int) $assignment['gradedCount'] ?> đã chấm</span>
+                                </td>
+                            <?php else: ?>
+                                <td data-label="Tình trạng">
+                                    <?php if ($assignment['mySubmissionStatus'] === 'graded'): ?>
+                                        <span class="badge bg-success">Đã chấm</span>
+                                    <?php elseif ($assignment['mySubmissionStatus'] === 'submitted'): ?>
+                                        <span class="badge bg-warning text-dark">Chờ chấm</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-secondary">Chưa nộp</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td data-label="Điểm"><?= $assignment['myScore'] !== null ? $this->escapeHtml((string) $assignment['myScore']) : '—' ?></td>
+                            <?php endif; ?>
+                            <td data-label="Thao tác">
+                                <div class="button-row">
+                                    <a class="btn btn--outline" href="<?= $this->url('assignment_view', ['id' => $assignment['id']]) ?>">
+                                        <?= $isTeacher ? 'Mở bài' : 'Xem / Nộp' ?>
+                                    </a>
+                                    <?php if ($canEdit): ?>
+                                        <a class="btn btn--quiet" href="<?= $this->url('assignment_edit', ['id' => $assignment['id']]) ?>">Sửa</a>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </section>
+<?php endif; ?>

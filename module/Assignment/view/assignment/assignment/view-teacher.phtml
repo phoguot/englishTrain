@@ -1,0 +1,140 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var \Assignment\Model\Assignment\AssignmentModel $assignment
+ * @var array<int, array{studentId:int,studentName:string,submission:?\Assignment\Model\Submission\SubmissionModel}> $rows
+ * @var bool $canEdit
+ * @var int|null $gradeSubmissionId
+ * @var array<string,mixed> $gradeValues
+ * @var array<string,string> $gradeErrors
+ */
+$typeLabels = ['essay' => 'Tự luận', 'quiz' => 'Trắc nghiệm', 'video' => 'Video'];
+$statusLabels = ['draft' => 'Nháp', 'published' => 'Đã giao', 'closed' => 'Đã đóng'];
+$quizJson = $assignment->getQuizJson() ?? [];
+$submittedCount = count(array_filter($rows, static fn (array $row): bool => $row['submission'] !== null));
+$gradedCount = count(array_filter(
+    $rows,
+    static fn (array $row): bool => $row['submission'] !== null && $row['submission']->isGraded(),
+));
+$gradeSubmissionId = $gradeSubmissionId ?? null;
+$gradeValues = $gradeValues ?? [];
+$gradeErrors = $gradeErrors ?? [];
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow"><?= $this->escapeHtml($typeLabels[(string) $assignment->getType()] ?? (string) $assignment->getType()) ?></p>
+        <h1><?= $this->escapeHtml((string) $assignment->getTitle()) ?>.</h1>
+        <?php if (($assignment->getDescription() ?? '') !== ''): ?>
+            <p class="pre-line"><?= $this->escapeHtml((string) $assignment->getDescription()) ?></p>
+        <?php endif; ?>
+    </div>
+    <div class="page-actions">
+        <span class="badge <?= $assignment->getStatus() === 'published' ? 'bg-success' : 'bg-secondary' ?>">
+            <?= $this->escapeHtml($statusLabels[$assignment->getStatus()] ?? $assignment->getStatus()) ?>
+        </span>
+        <?php if ($canEdit): ?>
+            <a class="btn btn--outline" href="<?= $this->url('assignment_edit', ['id' => $assignment->getId()]) ?>">Sửa bài</a>
+        <?php endif; ?>
+        <a class="btn btn--quiet"
+           href="<?= $this->url('assignments', [], ['query' => ['classroom' => $assignment->getClassroomId()]]) ?>">Quay lại</a>
+    </div>
+</div>
+
+<section class="stat-strip" aria-label="Tiến độ bài tập">
+    <div class="stat"><span class="stat__value"><?= count($rows) ?></span><span class="stat__label">Học sinh</span></div>
+    <div class="stat"><span class="stat__value"><?= $submittedCount ?></span><span class="stat__label">Đã nộp</span></div>
+    <div class="stat"><span class="stat__value"><?= $gradedCount ?></span><span class="stat__label">Đã chấm</span></div>
+    <div class="stat">
+        <span class="stat__value"><?= $assignment->getDeadlineAt() !== null
+            ? $this->escapeHtml(date('d/m', strtotime((string) $assignment->getDeadlineAt())))
+            : '—' ?></span>
+        <span class="stat__label">Hạn nộp</span>
+    </div>
+</section>
+
+<?php if ($rows === []): ?>
+    <section class="panel panel--tint">
+        <div class="panel__head"><h2>Chưa có học sinh</h2></div>
+        <p class="muted">Lớp chưa có học sinh để theo dõi bài nộp.</p>
+    </section>
+<?php else: ?>
+    <section class="assignment-stack">
+        <?php foreach ($rows as $row): ?>
+            <?php $submission = $row['submission']; ?>
+            <article class="panel">
+                <div class="panel__head">
+                    <h2><?= $this->escapeHtml($row['studentName']) ?></h2>
+                    <?php if (!$row['isMember']): ?><p class="muted">Học sinh đã rời lớp · giữ lại bài nộp lịch sử</p><?php endif; ?>
+                    <?php if ($submission === null): ?>
+                        <span class="badge bg-secondary">Chưa nộp</span>
+                    <?php elseif ($submission->isGraded()): ?>
+                        <span class="badge bg-success">Đã chấm · <?= $this->escapeHtml((string) $submission->getScore()) ?>/100</span>
+                    <?php else: ?>
+                        <span class="badge bg-warning text-dark">Chờ chấm</span>
+                    <?php endif; ?>
+                </div>
+
+                <?php if ($submission === null): ?>
+                    <p class="muted">Học sinh chưa nộp bài này.</p>
+                <?php else: ?>
+                    <p class="panel__meta">
+                        Nộp lúc <?= $this->escapeHtml(date('d/m/Y · H:i', strtotime((string) $submission->getSubmittedAt()))) ?>
+                    </p>
+
+                    <?php if ($assignment->getType() === 'essay'): ?>
+                        <div class="submission-copy pre-line"><?= $this->escapeHtml((string) $submission->getEssayText()) ?></div>
+                    <?php elseif ($assignment->getType() === 'quiz'): ?>
+                        <p>Điểm máy chấm: <strong><?= $this->escapeHtml((string) $submission->getAutoScore()) ?>/100</strong></p>
+                        <details class="mt-lg">
+                            <summary>Xem chi tiết bài làm</summary>
+                            <ol class="answer-review">
+                                <?php foreach ($quizJson as $index => $question): ?>
+                                    <?php
+                                    $answers = $submission->getQuizAnswers() ?? [];
+                                    $chosen = $answers[$index] ?? null;
+                                    $isRight = $chosen !== null
+                                        && (int) $chosen === (int) ($question['correct_index'] ?? -1);
+                                    ?>
+                                    <li>
+                                        <strong><?= $this->escapeHtml((string) ($question['question'] ?? '')) ?></strong>
+                                        <p class="<?= $isRight ? 'text-success' : 'text-danger' ?>">
+                                            Chọn: <?= $chosen === null
+                                                ? 'bỏ trống'
+                                                : $this->escapeHtml((string) ($question['options'][$chosen] ?? '?')) ?>
+                                        </p>
+                                        <?php if (!$isRight): ?>
+                                            <p>Đáp án đúng: <?= $this->escapeHtml((string) ($question['options'][$question['correct_index']] ?? '?')) ?></p>
+                                        <?php endif; ?>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ol>
+                        </details>
+                    <?php endif; ?>
+
+                    <?php if ($canEdit): ?>
+                        <form method="post" action="<?= $this->url('submission_grade', ['id' => $submission->getId()]) ?>"
+                              class="form-grid mt-lg">
+                            <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+                        <div class="field">
+                            <label for="score_<?= (int) $submission->getId() ?>">Điểm (0–100)</label>
+                            <input class="field__control<?= $gradeSubmissionId === (int) $submission->getId() && isset($gradeErrors['score']) ? ' is-invalid' : '' ?>" type="number" step="0.01" min="0" max="100"
+                                   id="score_<?= (int) $submission->getId() ?>" name="score"
+                                   value="<?= $this->escapeHtmlAttr((string) ($gradeSubmissionId === (int) $submission->getId() ? ($gradeValues['score'] ?? '') : ($submission->getScore() ?? $submission->getAutoScore() ?? ''))) ?>" required>
+                            <span class="field__help<?= $gradeSubmissionId === (int) $submission->getId() && isset($gradeErrors['score']) ? ' field__help--error' : '' ?>"><?= $this->escapeHtml($gradeSubmissionId === (int) $submission->getId() && isset($gradeErrors['score']) ? $gradeErrors['score'] : 'Giáo viên có thể điều chỉnh điểm máy chấm.') ?></span>
+                        </div>
+                        <div class="field">
+                            <label for="feedback_<?= (int) $submission->getId() ?>">Nhận xét</label>
+                            <textarea class="field__control" rows="3" maxlength="2000"
+                                      id="feedback_<?= (int) $submission->getId() ?>" name="feedback"><?= $this->escapeHtml((string) ($gradeSubmissionId === (int) $submission->getId() ? ($gradeValues['feedback'] ?? '') : ($submission->getFeedback() ?? ''))) ?></textarea>
+                            <span class="field__help<?= $gradeSubmissionId === (int) $submission->getId() && isset($gradeErrors['feedback']) ? ' field__help--error' : '' ?>"><?= $this->escapeHtml($gradeSubmissionId === (int) $submission->getId() && isset($gradeErrors['feedback']) ? $gradeErrors['feedback'] : 'Nhận xét sẽ hiển thị cho học sinh sau khi lưu.') ?></span>
+                        </div>
+                        <div class="field--wide"><button class="btn" type="submit">Lưu điểm</button></div>
+                        </form>
+                    <?php else: ?>
+                        <p class="demo-note mt-lg">Lớp đã lưu trữ nên điểm được hiển thị chỉ đọc.</p>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </article>
+        <?php endforeach; ?>
+    </section>
+<?php endif; ?>

@@ -1,0 +1,73 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var int $classroomId
+ * @var string $classroomName
+ * @var array<int, array<string,mixed>> $sessions
+ * @var bool $canEdit
+ */
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow">Attendance / <?= $this->escapeHtml($classroomName) ?></p>
+        <h1>Buổi học.</h1>
+        <p>Theo dõi từng buổi, số học sinh có mặt và những trường hợp cần lưu ý.</p>
+    </div>
+    <div class="page-actions">
+        <?php if ($canEdit): ?>
+            <a class="btn" href="<?= $this->url('attendance_create', [], ['query' => ['classroom' => $classroomId]]) ?>">
+                Tạo buổi học
+            </a>
+        <?php endif; ?>
+        <a class="btn btn--outline" href="<?= $this->url('classrooms') ?>">Quay lại lớp</a>
+    </div>
+</div>
+
+<?php if (!$canEdit): ?>
+    <div class="demo-note">Bạn đang xem ở chế độ chỉ đọc. Giáo viên phụ trách lớp thực hiện điểm danh.</div>
+<?php endif; ?>
+
+<?php if ($sessions === []): ?>
+    <section class="panel panel--tint">
+        <div class="panel__head"><h2>Chưa có buổi học</h2></div>
+        <p class="muted"><?= $canEdit ? 'Tạo buổi học đầu tiên để bắt đầu điểm danh.' : 'Lớp này chưa có dữ liệu điểm danh.' ?></p>
+    </section>
+<?php else: ?>
+    <section class="panel">
+        <div class="panel__head"><h2>Lịch sử buổi học</h2><span class="panel__meta"><?= count($sessions) ?> buổi</span></div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Ngày học</th>
+                        <th scope="col">Ghi chú</th>
+                        <th scope="col">Có mặt</th>
+                        <th scope="col">Đi muộn</th>
+                        <th scope="col">Vắng</th>
+                        <th scope="col">Có phép</th>
+                        <th scope="col">Đã chọn</th>
+                        <th scope="col">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($sessions as $session): ?>
+                        <tr>
+                            <td data-label="Ngày học"><strong><?= $this->escapeHtml($session['sessionDate']) ?></strong></td>
+                            <td data-label="Ghi chú" class="muted"><?= $this->escapeHtml((string) ($session['note'] ?? '')) ?></td>
+                            <td data-label="Có mặt"><span class="badge bg-success"><?= (int) $session['present'] ?></span></td>
+                            <td data-label="Đi muộn"><span class="badge bg-warning text-dark"><?= (int) $session['late'] ?></span></td>
+                            <td data-label="Vắng"><span class="badge bg-danger"><?= (int) $session['absent'] ?></span></td>
+                            <td data-label="Có phép"><span class="badge bg-info text-dark"><?= (int) $session['excused'] ?></span></td>
+                            <td data-label="Đã chọn"><?= (int) $session['markedCount'] ?>/<?= (int) $session['totalStudents'] ?></td>
+                            <td data-label="Thao tác">
+                                <a class="btn btn--outline" href="<?= $this->url('attendance_mark', ['sessionId' => $session['id']]) ?>">
+                                    <?= $canEdit ? ((int) $session['markedCount'] === 0 ? 'Điểm danh' : 'Sửa điểm danh') : 'Xem' ?>
+                                </a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </section>
+<?php endif; ?>

@@ -1,0 +1,11 @@
+{
+    "version": "0.0.1",
+    "configurations": [
+        {
+            "name": "englishtrain",
+            "runtimeExecutable": "php",
+            "runtimeArgs": ["-S", "0.0.0.0:8099", "-t", "public"],
+            "port": 8099
+        }
+    ]
+}

@@ -1,0 +1,105 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var \Attendance\Model\AttendanceSession\AttendanceSessionModel $session
+ * @var int $classroomId
+ * @var string $classroomName
+ * @var array<int, array{studentId:int, name:string, status:?string, note:?string, isMember:bool}> $rows
+ * @var string[] $statuses
+ * @var array<string,string> $labels
+ * @var bool $canEdit
+ * @var array<string,mixed> $sheetValues
+ * @var array<string,string> $errors
+ */
+$postedStatuses = is_array($sheetValues['status'] ?? null) ? $sheetValues['status'] : [];
+$postedNotes = is_array($sheetValues['note'] ?? null) ? $sheetValues['note'] : [];
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow"><?= $this->escapeHtml($classroomName) ?> / <?= $this->escapeHtml($session->getSessionDateForHuman()) ?></p>
+        <h1>Điểm danh buổi học.</h1>
+        <p>
+            <?= ($session->getNote() ?? '') !== ''
+                ? $this->escapeHtml((string) $session->getNote())
+                : 'Chọn một trạng thái cho từng học sinh, sau đó lưu toàn bộ danh sách.' ?>
+        </p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn--outline"
+           href="<?= $this->url('attendance', [], ['query' => ['classroom' => $classroomId]]) ?>">Quay lại</a>
+    </div>
+</div>
+
+<?php if (!$canEdit): ?>
+    <div class="demo-note">Chế độ chỉ đọc. Giáo viên phụ trách lớp mới có thể lưu điểm danh.</div>
+<?php endif; ?>
+
+<?php if ($rows === []): ?>
+    <section class="panel panel--tint">
+        <div class="panel__head"><h2>Chưa có học sinh</h2></div>
+        <p class="muted">Hãy gán học sinh vào lớp trước khi điểm danh.</p>
+    </section>
+<?php else: ?>
+    <form method="post" action="<?= $this->url('attendance_mark', ['sessionId' => $session->getId()]) ?>">
+        <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+        <?php if (isset($errors['sheet'])): ?><div class="alert alert-danger" role="alert"><?= $this->escapeHtml($errors['sheet']) ?></div><?php endif; ?>
+        <section class="panel">
+            <div class="panel__head">
+                <h2><?= count($rows) ?> học sinh</h2>
+                <span class="panel__meta"><?= count(array_filter($rows, static fn (array $row): bool => $row['status'] !== null)) ?> đã chọn</span>
+            </div>
+
+            <?php foreach ($rows as $row): ?>
+                <div class="attendance-row">
+                    <div class="attendance-row__student">
+                        <strong><?= $this->escapeHtml($row['name']) ?></strong>
+                        <span>
+                            <?= $row['isMember'] ? 'Học sinh trong lớp' : 'Đã rời lớp · vẫn giữ lịch sử buổi này' ?>
+                        </span>
+                    </div>
+                    <div class="status-choices" role="group" aria-label="Trạng thái của <?= $this->escapeHtmlAttr($row['name']) ?>">
+                        <?php foreach ($statuses as $status): ?>
+                            <?php $inputId = 'status_' . $row['studentId'] . '_' . $status; ?>
+                            <span class="status-option">
+                                <input type="radio" name="status[<?= (int) $row['studentId'] ?>]"
+                                       id="<?= $this->escapeHtmlAttr($inputId) ?>"
+                                       value="<?= $this->escapeHtmlAttr($status) ?>"
+                                       <?= (string) ($postedStatuses[$row['studentId']] ?? $row['status']) === $status ? 'checked' : '' ?>
+                                       <?= $canEdit ? '' : 'disabled' ?>>
+                                <label for="<?= $this->escapeHtmlAttr($inputId) ?>"><?= $this->escapeHtml($labels[$status]) ?></label>
+                            </span>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="field attendance-note">
+                        <label for="note_<?= (int) $row['studentId'] ?>">Ghi chú cho <?= $this->escapeHtml($row['name']) ?></label>
+                        <input class="field__control" type="text" id="note_<?= (int) $row['studentId'] ?>"
+                               name="note[<?= (int) $row['studentId'] ?>]" maxlength="255"
+                               value="<?= $this->escapeHtmlAttr((string) ($postedNotes[$row['studentId']] ?? $row['note'] ?? '')) ?>"
+                               <?= $canEdit ? '' : 'disabled' ?>>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </section>
+
+        <div class="button-row mt-lg">
+            <?php if ($canEdit): ?><button class="btn" type="submit">Lưu điểm danh</button><?php endif; ?>
+            <span class="panel__meta">
+                <?= $canEdit ? 'Học sinh chưa chọn sẽ được bỏ qua, không tính là vắng.' : 'Dữ liệu đang được hiển thị chỉ đọc.' ?>
+            </span>
+        </div>
+    </form>
+
+    <section class="panel panel--tint mt-lg">
+        <div class="panel__head"><h2>Xem chuyên cần từng học sinh</h2></div>
+        <div class="button-row">
+            <?php foreach ($rows as $row): ?>
+                <?php if ($row['isMember']): ?>
+                    <a class="btn btn--quiet"
+                       href="<?= $this->url('attendance_student', ['id' => $row['studentId']], ['query' => ['classroom' => $classroomId]]) ?>">
+                        <?= $this->escapeHtml($row['name']) ?>
+                    </a>
+                <?php endif; ?>
+            <?php endforeach; ?>
+        </div>
+    </section>
+<?php endif; ?>

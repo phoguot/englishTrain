@@ -1,0 +1,78 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var bool $isEdit
+ * @var int|null $editId
+ * @var array{name:string,teacher_id:int,schedule_note:string,status:string} $values
+ * @var array<string,string> $errors
+ * @var \User\Model\User\UserDto[] $teachers
+ */
+$action = $isEdit
+    ? $this->url('classrooms', ['action' => 'edit', 'id' => $editId])
+    : $this->url('classrooms', ['action' => 'create']);
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow">Classroom</p>
+        <h1><?= $isEdit ? 'Sửa lớp.' : 'Tạo lớp.' ?></h1>
+        <p>Ghi rõ tên, giáo viên phụ trách và nhịp học của lớp.</p>
+    </div>
+    <div class="page-actions"><a class="btn btn--outline" href="<?= $this->url('classrooms') ?>">Quay lại</a></div>
+</div>
+
+<form method="post" action="<?= $this->escapeHtmlAttr($action) ?>" class="panel form-grid">
+    <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+    <div class="field field--wide">
+        <label for="name">Tên lớp</label>
+        <input class="field__control" type="text" id="name" name="name" maxlength="100"
+               value="<?= $this->escapeHtmlAttr($values['name']) ?>" required
+               <?= isset($errors['name']) ? 'aria-invalid="true" aria-describedby="name-error"' : '' ?>>
+        <span class="field__help<?= isset($errors['name']) ? ' field__help--error' : '' ?>" id="name-error">
+            <?= isset($errors['name']) ? $this->escapeHtml($errors['name']) : 'Ví dụ: IELTS 6.5 tối T3–T5.' ?>
+        </span>
+    </div>
+
+    <div class="field">
+        <label for="teacher_id">Giáo viên phụ trách</label>
+        <select class="field__control" id="teacher_id" name="teacher_id" required
+                <?= isset($errors['teacher_id']) ? 'aria-invalid="true" aria-describedby="teacher-error"' : '' ?>>
+            <option value="">Chọn giáo viên</option>
+            <?php foreach ($teachers as $teacher): ?>
+                <option value="<?= (int) $teacher->id ?>" <?= $values['teacher_id'] === $teacher->id ? 'selected' : '' ?>>
+                    <?= $this->escapeHtml($teacher->fullName) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <span class="field__help<?= isset($errors['teacher_id']) ? ' field__help--error' : '' ?>" id="teacher-error">
+            <?= isset($errors['teacher_id']) ? $this->escapeHtml($errors['teacher_id']) : 'Chỉ hiển thị giáo viên đang hoạt động.' ?>
+        </span>
+    </div>
+
+    <div class="field">
+        <label for="status">Trạng thái</label>
+        <select class="field__control" id="status" name="status"
+                <?= isset($errors['status']) ? 'aria-invalid="true" aria-describedby="status-error"' : '' ?>>
+            <option value="active" <?= $values['status'] === 'active' ? 'selected' : '' ?>>Đang hoạt động</option>
+            <option value="archived" <?= $values['status'] === 'archived' ? 'selected' : '' ?>>Đã lưu trữ</option>
+        </select>
+        <span class="field__help<?= isset($errors['status']) ? ' field__help--error' : '' ?>" id="status-error">
+            <?= isset($errors['status']) ? $this->escapeHtml($errors['status']) : 'Lớp lưu trữ chỉ còn đọc.' ?>
+        </span>
+    </div>
+
+    <div class="field field--wide">
+        <label for="schedule_note">Ghi chú lịch học</label>
+        <input class="field__control" type="text" id="schedule_note" name="schedule_note" maxlength="255"
+               value="<?= $this->escapeHtmlAttr($values['schedule_note']) ?>"
+               placeholder="Tối T3–T5 · 19:00–21:00"
+               <?= isset($errors['schedule_note']) ? 'aria-invalid="true" aria-describedby="schedule-error"' : '' ?>>
+        <span class="field__help<?= isset($errors['schedule_note']) ? ' field__help--error' : '' ?>" id="schedule-error">
+            <?= isset($errors['schedule_note']) ? $this->escapeHtml($errors['schedule_note']) : 'Không bắt buộc, tối đa 255 ký tự.' ?>
+        </span>
+    </div>
+
+    <div class="field--wide button-row">
+        <button class="btn" type="submit"><?= $isEdit ? 'Lưu thay đổi' : 'Tạo lớp' ?></button>
+        <a class="btn btn--quiet" href="<?= $this->url('classrooms') ?>">Hủy</a>
+    </div>
+</form>

@@ -1,0 +1,26 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var bool $isEdit
+ * @var int|null $editId
+ * @var array<string,mixed> $values
+ * @var array<string,string> $errors
+ * @var string $csrfToken
+ */
+$action = $isEdit ? $this->url('user_edit', ['id' => $editId]) : $this->url('user_create');
+?>
+<div class="page-head">
+    <div class="page-head__copy"><p class="eyebrow">Tài khoản</p><h1><?= $isEdit ? 'Sửa tài khoản.' : 'Tạo tài khoản.' ?></h1></div>
+    <div class="page-actions"><a class="btn btn--outline" href="<?= $this->url('users') ?>">Quay lại</a></div>
+</div>
+<form method="post" action="<?= $this->escapeHtmlAttr($action) ?>" class="panel form-grid">
+    <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+    <div class="field"><label for="full_name">Họ tên</label><input class="field__control<?= isset($errors['full_name']) ? ' is-invalid' : '' ?>" id="full_name" name="full_name" maxlength="100" required value="<?= $this->escapeHtmlAttr((string) $values['full_name']) ?>"><?php if (isset($errors['full_name'])): ?><span class="invalid-feedback"><?= $this->escapeHtml($errors['full_name']) ?></span><?php endif; ?></div>
+    <div class="field"><label for="role">Vai trò</label><select class="field__control<?= isset($errors['role']) ? ' is-invalid' : '' ?>" id="role" name="role" required><?php foreach (['admin' => 'Quản trị', 'teacher' => 'Giáo viên', 'student' => 'Học sinh'] as $value => $label): ?><option value="<?= $this->escapeHtmlAttr($value) ?>" <?= $values['role'] === $value ? 'selected' : '' ?>><?= $this->escapeHtml($label) ?></option><?php endforeach; ?></select><?php if (isset($errors['role'])): ?><span class="invalid-feedback"><?= $this->escapeHtml($errors['role']) ?></span><?php endif; ?></div>
+    <div class="field"><label for="username">Tên đăng nhập</label><input class="field__control<?= isset($errors['username']) ? ' is-invalid' : '' ?>" id="username" name="username" maxlength="50" required value="<?= $this->escapeHtmlAttr((string) $values['username']) ?>"><?php if (isset($errors['username'])): ?><span class="invalid-feedback"><?= $this->escapeHtml($errors['username']) ?></span><?php endif; ?></div>
+    <div class="field"><label for="password">Mật khẩu<?= $isEdit ? ' mới' : '' ?></label><input class="field__control<?= isset($errors['password']) ? ' is-invalid' : '' ?>" id="password" name="password" type="password" autocomplete="new-password" <?= $isEdit ? '' : 'required' ?>><?php if ($isEdit): ?><span class="field__help">Để trống nếu không đổi mật khẩu.</span><?php endif; ?><?php if (isset($errors['password'])): ?><span class="invalid-feedback"><?= $this->escapeHtml($errors['password']) ?></span><?php endif; ?></div>
+    <div class="field"><label for="email">Email</label><input class="field__control<?= isset($errors['email']) ? ' is-invalid' : '' ?>" id="email" name="email" type="email" maxlength="150" value="<?= $this->escapeHtmlAttr((string) $values['email']) ?>"><?php if (isset($errors['email'])): ?><span class="invalid-feedback"><?= $this->escapeHtml($errors['email']) ?></span><?php endif; ?></div>
+    <div class="field"><label for="phone">Số điện thoại</label><input class="field__control<?= isset($errors['phone']) ? ' is-invalid' : '' ?>" id="phone" name="phone" maxlength="20" value="<?= $this->escapeHtmlAttr((string) $values['phone']) ?>"><?php if (isset($errors['phone'])): ?><span class="invalid-feedback"><?= $this->escapeHtml($errors['phone']) ?></span><?php endif; ?></div>
+    <div class="field"><label for="status">Trạng thái</label><select class="field__control<?= isset($errors['status']) ? ' is-invalid' : '' ?>" id="status" name="status"><option value="1" <?= (int) $values['status'] === 1 ? 'selected' : '' ?>>Đang hoạt động</option><option value="0" <?= (int) $values['status'] === 0 ? 'selected' : '' ?>>Khóa</option></select><?php if (isset($errors['status'])): ?><span class="invalid-feedback"><?= $this->escapeHtml($errors['status']) ?></span><?php endif; ?></div>
+    <div class="field field--wide"><button class="btn" type="submit"><?= $isEdit ? 'Lưu thay đổi' : 'Tạo tài khoản' ?></button> <a class="btn btn--quiet" href="<?= $this->url('users') ?>">Hủy</a></div>
+</form>

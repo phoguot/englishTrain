@@ -1,0 +1,64 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var string $studentName
+ * @var \Attendance\Model\AttendanceSummary $summary
+ * @var array<int, array{date:string, classroomName:string, status:string, statusLabel:string, note:?string}> $rows
+ * @var int $classroomId
+ * @var bool $isOwnPage
+ */
+$statusBadge = [
+    'present' => 'bg-success',
+    'late'    => 'bg-warning text-dark',
+    'absent'  => 'bg-danger',
+    'excused' => 'bg-info text-dark',
+];
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow">Attendance</p>
+        <h1><?= $isOwnPage ? 'Chuyên cần của em.' : 'Chuyên cần · ' . $this->escapeHtml($studentName) . '.' ?></h1>
+        <p>Mỗi buổi học được ghi lại rõ ràng để theo dõi nhịp học theo thời gian.</p>
+    </div>
+    <?php if (!$isOwnPage && $classroomId > 0): ?>
+        <div class="page-actions">
+            <a class="btn btn--outline"
+               href="<?= $this->url('attendance', [], ['query' => ['classroom' => $classroomId]]) ?>">Quay lại</a>
+        </div>
+    <?php endif; ?>
+</div>
+
+<section class="stat-strip" aria-label="Tóm tắt chuyên cần">
+    <div class="stat"><span class="stat__value"><?= $this->escapeHtml($summary->getRateForHuman()) ?></span><span class="stat__label">Chuyên cần</span></div>
+    <div class="stat"><span class="stat__value"><?= (int) $summary->totalSessions ?></span><span class="stat__label">Số buổi</span></div>
+    <div class="stat"><span class="stat__value"><?= (int) $summary->present ?></span><span class="stat__label">Có mặt</span></div>
+    <div class="stat"><span class="stat__value"><?= (int) $summary->late ?></span><span class="stat__label">Đi muộn</span></div>
+    <div class="stat"><span class="stat__value"><?= (int) $summary->absent ?></span><span class="stat__label">Vắng</span></div>
+    <div class="stat"><span class="stat__value"><?= (int) $summary->excused ?></span><span class="stat__label">Có phép</span></div>
+</section>
+
+<?php if ($rows === []): ?>
+    <section class="panel panel--tint">
+        <div class="panel__head"><h2>Chưa có buổi học</h2></div>
+        <p class="muted">Chưa có buổi nào được ghi nhận chuyên cần.</p>
+    </section>
+<?php else: ?>
+    <section class="panel">
+        <div class="panel__head"><h2>Lịch sử chuyên cần</h2><span class="panel__meta"><?= count($rows) ?> buổi</span></div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr><th scope="col">Ngày học</th><th scope="col">Lớp</th><th scope="col">Trạng thái</th><th scope="col">Ghi chú</th></tr></thead>
+                <tbody>
+                    <?php foreach ($rows as $row): ?>
+                        <tr>
+                            <td data-label="Ngày học"><strong><?= $this->escapeHtml($row['date']) ?></strong></td>
+                            <td data-label="Lớp"><?= $this->escapeHtml($row['classroomName']) ?></td>
+                            <td data-label="Trạng thái"><span class="badge <?= $statusBadge[$row['status']] ?? 'bg-secondary' ?>"><?= $this->escapeHtml($row['statusLabel']) ?></span></td>
+                            <td data-label="Ghi chú" class="muted"><?= $this->escapeHtml((string) ($row['note'] ?? '')) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </section>
+<?php endif; ?>

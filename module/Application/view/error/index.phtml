@@ -1,0 +1,37 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ *
+ * Prod: chỉ hiện câu chung chung, chi tiết ghi log (.claude/rules/03-view-ui.md).
+ * Dev: `display_exceptions` = true → hiện đầy đủ exception, nếu không thì không debug được.
+ */
+$showDetail = isset($this->display_exceptions) && $this->display_exceptions && isset($this->exception);
+?>
+<div class="<?= $showDetail ? '' : 'text-center py-5' ?>">
+    <h1 class="display-6">Đã có lỗi xảy ra</h1>
+    <p class="text-muted">Hệ thống gặp sự cố. Vui lòng thử lại sau.</p>
+
+    <?php if ($showDetail): ?>
+        <?php $e = $this->exception; ?>
+        <div class="alert alert-danger mt-3">
+            <strong>Chỉ hiện ở môi trường dev.</strong>
+        </div>
+        <?php while ($e !== null): ?>
+            <div class="card mb-3">
+                <div class="card-header">
+                    <code><?= $this->escapeHtml(get_class($e)) ?></code>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1"><?= $this->escapeHtml($e->getMessage()) ?></p>
+                    <p class="text-muted small mb-2">
+                        <?= $this->escapeHtml($e->getFile()) ?>:<?= (int) $e->getLine() ?>
+                    </p>
+                    <pre class="small mb-0 overflow-auto"><?= $this->escapeHtml($e->getTraceAsString()) ?></pre>
+                </div>
+            </div>
+            <?php $e = $e->getPrevious(); ?>
+        <?php endwhile; ?>
+    <?php else: ?>
+        <a href="<?= $this->url('home') ?>" class="btn btn-primary">Về trang chủ</a>
+    <?php endif; ?>
+</div>

@@ -1,0 +1,46 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var string $csrfToken
+ * @var string $username
+ * @var array<string,string> $errors
+ */
+?>
+<main class="login-layout" id="noi-dung">
+    <section class="login-story">
+        <a class="brand" href="<?= $this->url('login') ?>">
+            <span class="brand__mark" aria-hidden="true">ET</span>
+            <span class="brand__name">EnglishTrain</span>
+        </a>
+        <h1>Học có nhịp. Dạy có dấu.</h1>
+        <p>Một nơi gọn gàng để giao bài, nộp bài, điểm danh và ghi lại tiến bộ của từng học sinh.</p>
+    </section>
+    <section class="login-form-wrap">
+        <form class="login-form" method="post" action="<?= $this->url('login') ?>">
+            <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+            <?= $this->flashMessenger()->render('success', ['alert', 'alert-success']) ?>
+            <?= $this->flashMessenger()->render('error', ['alert', 'alert-danger']) ?>
+            <?php if (isset($errors['login'])): ?>
+                <div class="alert alert-danger"><?= $this->escapeHtml($errors['login']) ?></div>
+            <?php endif; ?>
+            <div>
+                <p class="eyebrow">Chào mừng trở lại</p>
+                <h2>Đăng nhập</h2>
+            </div>
+            <div class="field">
+                <label for="username">Tên đăng nhập</label>
+                <input class="field__control" id="username" name="username" autocomplete="username"
+                       maxlength="50" placeholder="Ví dụ: thanh.ha" required autofocus
+                       value="<?= $this->escapeHtmlAttr($username) ?>">
+                <span class="field__help"><?= isset($errors['username']) ? $this->escapeHtml($errors['username']) : 'Dùng tài khoản do trung tâm cung cấp.' ?></span>
+            </div>
+            <div class="field">
+                <label for="password">Mật khẩu</label>
+                <input class="field__control" id="password" name="password" type="password"
+                       autocomplete="current-password" required>
+                <span class="field__help"><?= isset($errors['password']) ? $this->escapeHtml($errors['password']) : 'Mật khẩu phân biệt chữ hoa và chữ thường.' ?></span>
+            </div>
+            <button class="btn" type="submit">Đăng nhập</button>
+        </form>
+    </section>
+</main>

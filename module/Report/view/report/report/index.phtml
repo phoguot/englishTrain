@@ -1,0 +1,64 @@
+<?php
+/** @var Laminas\View\Renderer\PhpRenderer $this */
+/** @var Classroom\Model\Classroom\ClassroomDto $classroom */
+/** @var array<int,User\Model\User\UserDto> $students */
+/** @var array<int,array{report:Report\Model\StudentReport\StudentReportModel,studentName:string}> $reports */
+/** @var bool $canEdit */
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow">Report / <?= $this->escapeHtml($classroom->name) ?></p>
+        <h1>Nhận xét định kỳ.</h1>
+        <p>Soạn, rà soát và xuất bản nhận xét cho từng học sinh.</p>
+    </div>
+    <div class="page-actions"><a class="btn btn--outline" href="<?= $this->url('classrooms') ?>">Quay lại lớp</a></div>
+</div>
+
+<?php if (!$canEdit): ?>
+    <div class="demo-note">Lớp đã lưu trữ. Report cũ chỉ còn ở chế độ xem.</div>
+<?php endif; ?>
+
+<?php if ($canEdit && $students !== []): ?>
+    <section class="panel panel--tint">
+        <div class="panel__head"><h2>Tạo report mới</h2></div>
+        <div class="button-row">
+            <?php foreach ($students as $student): ?>
+                <a class="btn btn--quiet" href="<?= $this->url('report_create', [], ['query' => ['classroom' => $classroom->id, 'student' => $student->id]]) ?>">
+                    <?= $this->escapeHtml($student->fullName) ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </section>
+<?php endif; ?>
+
+<section class="panel">
+    <div class="panel__head"><h2>Danh sách report</h2><span class="panel__meta"><?= count($reports) ?> report</span></div>
+    <?php if ($reports === []): ?>
+        <p class="muted">Chưa có report nào cho lớp này.</p>
+    <?php else: ?>
+        <div class="table-wrap"><table class="data-table">
+            <thead><tr><th scope="col">Học sinh</th><th scope="col">Kỳ</th><th scope="col">Nội dung</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th></tr></thead>
+            <tbody>
+            <?php foreach ($reports as $row): $report = $row['report']; ?>
+                <tr>
+                    <td data-label="Học sinh"><strong><?= $this->escapeHtml($row['studentName']) ?></strong></td>
+                    <td data-label="Kỳ"><?= $this->escapeHtml((string) $report->getPeriodLabel()) ?></td>
+                    <td data-label="Nội dung"><details><summary>Xem nhận xét</summary><div class="report-content"><?= $report->getContent() ?></div></details></td>
+                    <td data-label="Trạng thái"><span class="badge <?= $report->isPublished() ? 'bg-success' : 'bg-secondary' ?>"><?= $report->isPublished() ? 'Đã xuất bản' : 'Bản nháp' ?></span></td>
+                    <td data-label="Thao tác"><div class="button-row">
+                        <?php if (!$report->isPublished() && $canEdit): ?>
+                            <a class="btn btn--quiet" href="<?= $this->url('report_edit', ['id' => $report->getId()]) ?>">Sửa</a>
+                            <form method="post" action="<?= $this->url('report_publish', ['id' => $report->getId()]) ?>" data-confirm-publish>
+                                <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+                                <button class="btn" type="submit">Xuất bản</button>
+                            </form>
+                        <?php else: ?>
+                            <span class="muted">Chỉ đọc</span>
+                        <?php endif; ?>
+                    </div></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table></div>
+    <?php endif; ?>
+</section>

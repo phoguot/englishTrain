@@ -1,0 +1,51 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var User\Model\User\UserModel[] $users
+ * @var string $query
+ * @var array<string,string> $errors
+ * @var int $currentUserId
+ * @var string $csrfToken
+ */
+$roleLabels = ['admin' => 'Quản trị', 'teacher' => 'Giáo viên', 'student' => 'Học sinh'];
+?>
+<div class="page-head">
+    <div class="page-head__copy"><p class="eyebrow">Quản trị</p><h1>Tài khoản.</h1><p>Tạo và quản lý người dùng trong hệ thống.</p></div>
+    <div class="page-actions"><a class="btn" href="<?= $this->url('user_create') ?>">Tạo tài khoản</a></div>
+</div>
+
+<form method="get" action="<?= $this->url('users') ?>" class="panel form-grid mb-4">
+    <div class="field field--wide">
+        <label for="q">Tìm theo họ tên, username hoặc email</label>
+        <input class="field__control<?= isset($errors['q']) ? ' is-invalid' : '' ?>" id="q" name="q" value="<?= $this->escapeHtmlAttr($query) ?>">
+        <?php if (isset($errors['q'])): ?><span class="invalid-feedback"><?= $this->escapeHtml($errors['q']) ?></span><?php endif; ?>
+    </div>
+    <div><button class="btn btn--outline" type="submit">Tìm kiếm</button></div>
+</form>
+
+<?php if ($users === []): ?>
+    <div class="panel"><p class="muted">Không có tài khoản phù hợp.</p></div>
+<?php else: ?>
+    <div class="table-responsive"><table class="table align-middle">
+        <thead><tr><th scope="col">Họ tên</th><th scope="col">Tài khoản</th><th scope="col">Vai trò</th><th scope="col">Trạng thái</th><th scope="col" class="text-end">Thao tác</th></tr></thead>
+        <tbody>
+        <?php foreach ($users as $user): ?>
+            <tr>
+                <td><strong><?= $this->escapeHtml((string) $user->getFullName()) ?></strong><div class="muted"><?= $this->escapeHtml((string) ($user->getEmail() ?? '')) ?></div></td>
+                <td><?= $this->escapeHtml((string) $user->getUsername()) ?></td>
+                <td><?= $this->escapeHtml($roleLabels[(string) $user->getRole()] ?? (string) $user->getRole()) ?></td>
+                <td><span class="badge <?= $user->isActive() ? 'bg-success' : 'bg-secondary' ?>"><?= $user->isActive() ? 'Đang hoạt động' : 'Đã khóa' ?></span></td>
+                <td class="text-end">
+                    <a class="btn btn--quiet" href="<?= $this->url('user_edit', ['id' => $user->getId()]) ?>">Sửa</a>
+                    <?php if ((int) $user->getId() !== $currentUserId): ?>
+                        <form method="post" action="<?= $this->url('user_delete', ['id' => $user->getId()]) ?>" class="d-inline" data-confirm-delete>
+                            <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+                            <button class="btn btn-outline-danger" type="submit">Xóa</button>
+                        </form>
+                    <?php endif; ?>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table></div>
+<?php endif; ?>

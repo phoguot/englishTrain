@@ -1,0 +1,61 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var array{classroom_id:int, session_date:string, note:string} $values
+ * @var array<string,string> $errors
+ * @var array<int, array{id:int,name:string,teacherName:string,studentCount:int,status:string}> $classrooms
+ */
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow">Attendance</p>
+        <h1>Tạo buổi học.</h1>
+        <p>Chọn lớp và ngày học. Sau khi tạo, bạn sẽ được đưa thẳng đến bảng điểm danh.</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn--outline"
+           href="<?= $this->url('attendance', [], ['query' => ['classroom' => $values['classroom_id']]]) ?>">Quay lại</a>
+    </div>
+</div>
+
+<form method="post" action="<?= $this->url('attendance_create') ?>" class="panel form-grid">
+    <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+    <div class="field">
+        <label for="classroom_id">Lớp</label>
+        <select class="field__control" id="classroom_id" name="classroom_id" required
+                <?= isset($errors['classroom_id']) ? 'aria-invalid="true" aria-describedby="attendance-classroom-error"' : '' ?>>
+            <option value="">Chọn lớp</option>
+            <?php foreach ($classrooms as $classroom): ?>
+                <option value="<?= (int) $classroom['id'] ?>"
+                    <?= (int) $classroom['id'] === $values['classroom_id'] ? 'selected' : '' ?>>
+                    <?= $this->escapeHtml($classroom['name']) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <span class="field__help<?= isset($errors['classroom_id']) ? ' field__help--error' : '' ?>" id="attendance-classroom-error">
+            <?= isset($errors['classroom_id']) ? $this->escapeHtml($errors['classroom_id']) : 'Chỉ hiển thị lớp bạn phụ trách.' ?>
+        </span>
+    </div>
+
+    <div class="field">
+        <label for="session_date">Ngày học</label>
+        <input class="field__control" type="date" id="session_date" name="session_date"
+               value="<?= $this->escapeHtmlAttr($values['session_date']) ?>" required
+               <?= isset($errors['session_date']) ? 'aria-invalid="true" aria-describedby="session-date-error"' : '' ?>>
+        <span class="field__help<?= isset($errors['session_date']) ? ' field__help--error' : '' ?>" id="session-date-error">
+            <?= isset($errors['session_date']) ? $this->escapeHtml($errors['session_date']) : 'Mỗi lớp chỉ có một buổi trong cùng một ngày.' ?>
+        </span>
+    </div>
+
+    <div class="field field--wide">
+        <label for="note">Ghi chú buổi học</label>
+        <input class="field__control" type="text" id="note" name="note" maxlength="255"
+               value="<?= $this->escapeHtmlAttr($values['note']) ?>" placeholder="Unit 5 · Past simple"
+               <?= isset($errors['note']) ? 'aria-invalid="true" aria-describedby="attendance-note-error"' : '' ?>>
+        <span class="field__help<?= isset($errors['note']) ? ' field__help--error' : '' ?>" id="attendance-note-error">
+            <?= isset($errors['note']) ? $this->escapeHtml($errors['note']) : 'Không bắt buộc, tối đa 255 ký tự.' ?>
+        </span>
+    </div>
+
+    <div class="field--wide"><button class="btn" type="submit">Tạo buổi học</button></div>
+</form>

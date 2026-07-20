@@ -1,0 +1,13 @@
+/vendor/
+/data/cache/*
+!/data/cache/.gitkeep
+/config/autoload/local.php
+/config/autoload/development.local.php
+.idea/
+
+# Claude Code — file cá nhân, không commit
+# (.claude/settings.json, rules/, agents/, commands/, skills/, hooks/ thì CÓ commit)
+CLAUDE.local.md
+.claude/settings.local.json
+.mcp.json
+.hallmark/

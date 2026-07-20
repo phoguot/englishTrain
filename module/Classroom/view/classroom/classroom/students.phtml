@@ -1,0 +1,47 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var \Classroom\Model\Classroom\ClassroomModel $classroom
+ * @var \User\Model\User\UserDto[] $students
+ * @var int[] $memberIds
+ */
+$memberSet = array_fill_keys($memberIds, true);
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow">Lớp học / <?= $this->escapeHtml($classroom->getName()) ?></p>
+        <h1>Danh sách học sinh.</h1>
+        <p>Chọn những học sinh đang theo học lớp này, sau đó lưu toàn bộ danh sách.</p>
+    </div>
+    <div class="page-actions"><a class="btn btn--outline" href="<?= $this->url('classrooms') ?>">Quay lại</a></div>
+</div>
+
+<?php if ($students === []): ?>
+    <section class="panel panel--tint">
+        <div class="panel__head"><h2>Chưa có học sinh</h2></div>
+        <p class="muted">Hệ thống chưa có tài khoản học sinh hoạt động để gán vào lớp.</p>
+    </section>
+<?php else: ?>
+    <form method="post" action="<?= $this->url('classroom_students', ['id' => $classroom->getId()]) ?>" class="panel">
+        <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+        <?php if (isset($errors['student_ids'])): ?><div class="alert alert-danger" role="alert"><?= $this->escapeHtml($errors['student_ids']) ?></div><?php endif; ?>
+        <div class="panel__head">
+            <h2><?= count($students) ?> học sinh</h2>
+            <span class="panel__meta"><?= count($memberIds) ?> đang được chọn</span>
+        </div>
+        <div class="choice-grid">
+            <?php foreach ($students as $student): ?>
+                <div class="choice">
+                    <input type="checkbox" name="student_ids[]" value="<?= (int) $student->id ?>"
+                           id="student_<?= (int) $student->id ?>"
+                           <?= isset($memberSet[$student->id]) ? 'checked' : '' ?>>
+                    <label for="student_<?= (int) $student->id ?>"><?= $this->escapeHtml($student->fullName) ?></label>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <div class="button-row mt-lg">
+            <button class="btn" type="submit">Lưu danh sách</button>
+            <a class="btn btn--quiet" href="<?= $this->url('classrooms') ?>">Hủy</a>
+        </div>
+    </form>
+<?php endif; ?>

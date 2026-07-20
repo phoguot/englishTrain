@@ -1,0 +1,171 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var string $role
+ * @var int $userId
+ * @var string $fullName
+ * @var array<int, array<string,mixed>> $classrooms
+ * @var array<string,int> $adminStats
+ * @var array<int,array<string,mixed>> $pendingAssignments
+ * @var array<int,array<string,mixed>> $upcomingAssignments
+ * @var array<int,array<string,mixed>> $gradedAssignments
+ */
+$headings = [
+    'admin'   => ['Hệ thống', 'Toàn cảnh trung tâm.', 'Theo dõi các lớp và đi thẳng đến công việc cần xử lý.'],
+    'teacher' => ['Không gian giáo viên', 'Chào ' . $fullName . '.', 'Lớp học, bài tập và điểm danh ở cùng một nhịp.'],
+    'student' => ['Không gian học sinh', 'Chào ' . $fullName . '.', 'Mở lớp của em để xem bài tập và theo dõi chuyên cần.'],
+];
+[$eyebrow, $heading, $lede] = $headings[$role] ?? ['EnglishTrain', 'Chào bạn.', ''];
+$formatDate = static function (?string $value): string {
+    if ($value === null || strtotime($value) === false) {
+        return 'Không hạn';
+    }
+    return date('d/m/Y H:i', (int) strtotime($value));
+};
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow"><?= $this->escapeHtml($eyebrow) ?></p>
+        <h1><?= $this->escapeHtml($heading) ?></h1>
+        <p><?= $this->escapeHtml($lede) ?></p>
+    </div>
+    <?php if (in_array($role, ['admin', 'teacher'], true)): ?>
+        <div class="page-actions">
+            <a class="btn" href="<?= $this->url('classrooms') ?>">Mở danh sách lớp</a>
+        </div>
+    <?php endif; ?>
+</div>
+
+<section class="stat-strip" aria-label="Tổng quan nhanh">
+    <?php if ($role === 'admin'): ?>
+        <?php foreach (['classrooms' => 'Lớp học', 'teachers' => 'Giáo viên active', 'students' => 'Học sinh active'] as $key => $label): ?>
+            <div class="stat">
+                <span class="stat__value" data-counter="<?= (int) ($adminStats[$key] ?? 0) ?>" data-pad="2"><?= str_pad((string) ($adminStats[$key] ?? 0), 2, '0', STR_PAD_LEFT) ?></span>
+                <span class="stat__label"><?= $this->escapeHtml($label) ?></span>
+            </div>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <div class="stat">
+            <span class="stat__value" data-counter="<?= count($classrooms) ?>" data-pad="2"><?= str_pad((string) count($classrooms), 2, '0', STR_PAD_LEFT) ?></span>
+            <span class="stat__label"><?= $role === 'student' ? 'Lớp đang học' : 'Lớp phụ trách' ?></span>
+        </div>
+        <div class="stat">
+            <span class="stat__value" data-counter="<?= $role === 'teacher' ? count($pendingAssignments) : count($upcomingAssignments) ?>" data-pad="2">
+                <?= str_pad((string) ($role === 'teacher' ? count($pendingAssignments) : count($upcomingAssignments)), 2, '0', STR_PAD_LEFT) ?>
+            </span>
+            <span class="stat__label"><?= $role === 'teacher' ? 'Bài cần chấm' : 'Bài sắp đến hạn' ?></span>
+        </div>
+    <?php endif; ?>
+</section>
+
+<?php if ($role === 'teacher'): ?>
+    <section class="panel mt-xl">
+        <div class="panel__head"><h2>Bài chờ chấm</h2><span class="panel__meta"><?= count($pendingAssignments) ?>/5 bài gần nhất</span></div>
+        <?php if ($pendingAssignments === []): ?>
+            <p class="muted">Hiện không có bài nộp nào đang chờ chấm.</p>
+        <?php else: ?>
+            <div class="table-wrap"><table class="data-table">
+                <thead><tr><th scope="col">Bài tập</th><th scope="col">Lớp</th><th scope="col">Chờ chấm</th><th scope="col">Hạn</th><th scope="col">Thao tác</th></tr></thead>
+                <tbody>
+                <?php foreach ($pendingAssignments as $assignment): ?>
+                    <tr>
+                        <td data-label="Bài tập"><strong><?= $this->escapeHtml($assignment['title']) ?></strong></td>
+                        <td data-label="Lớp"><?= $this->escapeHtml($assignment['classroomName']) ?></td>
+                        <td data-label="Chờ chấm"><span class="badge bg-warning text-dark"><?= (int) $assignment['submittedCount'] ?></span></td>
+                        <td data-label="Hạn"><?= $this->escapeHtml($formatDate($assignment['deadlineAt'])) ?></td>
+                        <td data-label="Thao tác"><a class="btn btn--quiet" href="<?= $this->url('assignment_view', ['id' => $assignment['id']]) ?>">Mở bài</a></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table></div>
+        <?php endif; ?>
+    </section>
+<?php endif; ?>
+
+<?php if ($role === 'student'): ?>
+    <div class="dashboard-grid mt-xl">
+        <section class="panel">
+            <div class="panel__head"><h2>Bài sắp đến hạn</h2><span class="panel__meta"><?= count($upcomingAssignments) ?>/5 bài</span></div>
+            <?php if ($upcomingAssignments === []): ?>
+                <p class="muted">Em chưa có bài nào sắp đến hạn.</p>
+            <?php else: ?>
+                <?php foreach ($upcomingAssignments as $assignment): ?>
+                    <article class="d-flex justify-content-between align-items-center gap-3 py-3 border-bottom">
+                        <div><strong><?= $this->escapeHtml($assignment['title']) ?></strong><p class="muted"><?= $this->escapeHtml($assignment['classroomName']) ?> · Hạn <?= $this->escapeHtml($formatDate($assignment['deadlineAt'])) ?></p></div>
+                        <a class="btn btn--quiet" href="<?= $this->url('assignment_view', ['id' => $assignment['id']]) ?>">Mở bài</a>
+                    </article>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </section>
+        <section class="panel panel--tint">
+            <div class="panel__head"><h2>Bài đã chấm</h2><span class="panel__meta"><?= count($gradedAssignments) ?>/5 bài</span></div>
+            <?php if ($gradedAssignments === []): ?>
+                <p class="muted">Chưa có bài nào được chấm điểm.</p>
+            <?php else: ?>
+                <?php foreach ($gradedAssignments as $assignment): ?>
+                    <article class="d-flex justify-content-between align-items-center gap-3 py-3 border-bottom">
+                        <div><strong><?= $this->escapeHtml($assignment['title']) ?></strong><p class="muted"><?= $this->escapeHtml($assignment['classroomName']) ?></p></div>
+                        <span class="badge bg-success"><?= $this->escapeHtml(number_format((float) $assignment['score'], 2)) ?> điểm</span>
+                    </article>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </section>
+    </div>
+<?php endif; ?>
+
+<?php if ($classrooms === []): ?>
+    <section class="panel panel--tint">
+        <div class="panel__head"><h2>Chưa có lớp học</h2></div>
+        <p class="muted">
+            <?= $role === 'student'
+                ? 'Em chưa được xếp vào lớp nào. Hãy liên hệ giáo viên hoặc trung tâm.'
+                : 'Danh sách lớp hiện đang trống.' ?>
+        </p>
+    </section>
+<?php else: ?>
+    <section class="hub-grid mt-xl" aria-label="Danh sách lớp">
+        <?php foreach ($classrooms as $classroom): ?>
+            <article class="hub-card">
+                <span class="hub-card__number">
+                    <?= isset($classroom['studentCount'])
+                        ? (int) $classroom['studentCount'] . ' học sinh'
+                        : 'Lớp của em' ?>
+                </span>
+                <div>
+                    <h2><?= $this->escapeHtml($classroom['name']) ?></h2>
+                    <p>
+                        Giáo viên: <?= $this->escapeHtml($classroom['teacherName']) ?>
+                    </p>
+                    <div class="button-row mt-lg">
+                        <?php if ($role !== 'admin'): ?>
+                            <a class="btn" href="<?= $this->url('assignments', [], ['query' => ['classroom' => $classroom['id']]]) ?>">
+                                Xem bài tập
+                            </a>
+                        <?php endif; ?>
+                        <?php if (in_array($role, ['admin', 'teacher'], true)): ?>
+                            <a class="btn btn--outline"
+                               href="<?= $this->url('attendance', [], ['query' => ['classroom' => $classroom['id']]]) ?>">
+                                Điểm danh
+                            </a>
+                        <?php endif; ?>
+                        <?php if ($role === 'teacher'): ?>
+                            <a class="btn btn--quiet" href="<?= $this->url('reports', [], ['query' => ['classroom' => $classroom['id']]]) ?>">Report</a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </article>
+        <?php endforeach; ?>
+    </section>
+<?php endif; ?>
+
+<?php if ($role === 'student'): ?>
+    <?php if ($userId > 0): ?>
+        <section class="panel panel--ink mt-lg">
+            <div class="panel__head"><h2>Chuyên cần của em</h2></div>
+            <p class="muted">Xem lịch sử có mặt, đi muộn, vắng và có phép.</p>
+            <a class="btn btn--outline mt-lg"
+               href="<?= $this->url('attendance_student', ['id' => $userId]) ?>">Xem chuyên cần</a>
+            <a class="btn btn--outline mt-lg" href="<?= $this->url('my_reports') ?>">Xem report</a>
+        </section>
+    <?php endif; ?>
+<?php endif; ?>

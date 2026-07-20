@@ -1,0 +1,57 @@
+<?php
+/** @var Laminas\View\Renderer\PhpRenderer $this */
+/** @var bool $isEdit */
+/** @var array<string,mixed> $values */
+/** @var array<string,string> $errors */
+/** @var User\Model\User\UserDto $student */
+/** @var Classroom\Model\Classroom\ClassroomDto $classroom */
+/** @var Attendance\Model\AttendanceSummary $attendance */
+/** @var ?float $avgScore */
+/** @var array{submitted:int,graded:int,missed:int} $counts */
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow">Report / <?= $this->escapeHtml($classroom->name) ?></p>
+        <h1><?= $isEdit ? 'Sửa bản nháp.' : 'Soạn report.' ?></h1>
+        <p>Học sinh: <strong><?= $this->escapeHtml($student->fullName) ?></strong></p>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <section class="panel">
+        <div class="panel__head"><h2>Nội dung nhận xét</h2></div>
+        <form method="post" action="<?= $isEdit ? $this->url('report_edit', ['id' => $editId]) : $this->url('report_create', [], ['query' => ['classroom' => $classroom->id, 'student' => $student->id]]) ?>">
+            <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+            <input type="hidden" name="classroom_id" value="<?= (int) $classroom->id ?>">
+            <input type="hidden" name="student_id" value="<?= (int) $student->id ?>">
+            <div class="field">
+                <label for="period_label">Kỳ báo cáo</label>
+                <input class="field__control" type="month" id="period_label" name="period_label" required value="<?= $this->escapeHtmlAttr((string) $values['period_label']) ?>" <?= isset($errors['period_label']) ? 'aria-invalid="true"' : '' ?>>
+                <span class="field__help<?= isset($errors['period_label']) ? ' field__help--error' : '' ?>"><?= $this->escapeHtml($errors['period_label'] ?? 'Chọn tháng cần nhận xét.') ?></span>
+            </div>
+            <div class="field">
+                <label for="content">Nhận xét</label>
+                <div class="button-row" data-report-toolbar>
+                    <button class="btn btn--quiet" type="button" data-open="<strong>" data-close="</strong>">Đậm</button>
+                    <button class="btn btn--quiet" type="button" data-open="<em>" data-close="</em>">Nghiêng</button>
+                    <button class="btn btn--quiet" type="button" data-open="<ul><li>" data-close="</li></ul>">Danh sách</button>
+                </div>
+                <textarea class="field__control" id="content" name="content" rows="14" required <?= isset($errors['content']) ? 'aria-invalid="true"' : '' ?>><?= $this->escapeHtml((string) $values['content']) ?></textarea>
+                <span class="field__help<?= isset($errors['content']) ? ' field__help--error' : '' ?>"><?= $this->escapeHtml($errors['content'] ?? 'Có thể dùng các nút định dạng; mọi mã và thuộc tính không an toàn sẽ bị loại khi lưu.') ?></span>
+            </div>
+            <div class="button-row">
+                <button class="btn" type="submit">Lưu bản nháp</button>
+                <a class="btn btn--quiet" href="<?= $this->url('reports', [], ['query' => ['classroom' => $classroom->id]]) ?>">Hủy</a>
+            </div>
+        </form>
+    </section>
+    <aside class="panel panel--tint">
+        <div class="panel__head"><h2>Số liệu tham khảo</h2><span class="panel__meta"><?= $this->escapeHtml((string) $values['period_label']) ?></span></div>
+        <p><strong>Chuyên cần:</strong> <?= $this->escapeHtml($attendance->getRateForHuman()) ?> (<?= (int) $attendance->totalSessions ?> buổi)</p>
+        <p><strong>Điểm trung bình:</strong> <?= $avgScore === null ? '—' : $this->escapeHtml(number_format($avgScore, 2)) ?></p>
+        <p><strong>Đã nộp, chờ chấm:</strong> <?= (int) $counts['submitted'] ?></p>
+        <p><strong>Đã chấm:</strong> <?= (int) $counts['graded'] ?></p>
+        <p><strong>Quá hạn chưa nộp:</strong> <?= (int) $counts['missed'] ?></p>
+        <p class="muted">Số liệu chỉ để tham khảo và không tự chèn vào nội dung report.</p>
+    </aside>
+</div>

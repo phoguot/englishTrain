@@ -1,0 +1,104 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var \Assignment\Model\Assignment\AssignmentModel $assignment
+ * @var \Assignment\Model\Submission\SubmissionModel|null $mySubmission
+ * @var array<string,mixed> $submitValues
+ * @var array<string,string> $submitErrors
+ */
+$typeLabels = ['essay' => 'Tự luận', 'quiz' => 'Trắc nghiệm', 'video' => 'Video'];
+$quizJson = $assignment->getQuizJson() ?? [];
+$canSubmit = $assignment->acceptsSubmission();
+$answers = is_array($submitValues['answers'] ?? null)
+    ? $submitValues['answers']
+    : ($mySubmission?->getQuizAnswers() ?? []);
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow"><?= $this->escapeHtml($typeLabels[(string) $assignment->getType()] ?? (string) $assignment->getType()) ?></p>
+        <h1><?= $this->escapeHtml((string) $assignment->getTitle()) ?>.</h1>
+        <?php if (($assignment->getDescription() ?? '') !== ''): ?>
+            <p class="pre-line"><?= $this->escapeHtml((string) $assignment->getDescription()) ?></p>
+        <?php endif; ?>
+    </div>
+    <div class="page-actions">
+        <?php if ($assignment->getDeadlineAt() !== null): ?>
+            <span class="badge <?= $assignment->isPastDeadline() ? 'bg-danger' : 'bg-warning text-dark' ?>">
+                Hạn <?= $this->escapeHtml(date('d/m/Y · H:i', strtotime((string) $assignment->getDeadlineAt()))) ?>
+            </span>
+        <?php endif; ?>
+        <a class="btn btn--quiet"
+           href="<?= $this->url('assignments', [], ['query' => ['classroom' => $assignment->getClassroomId()]]) ?>">Quay lại</a>
+    </div>
+</div>
+
+<?php if ($mySubmission !== null): ?>
+    <section class="panel <?= $mySubmission->isGraded() ? 'panel--tint' : '' ?>">
+        <div class="panel__head">
+            <h2>Kết quả bài nộp</h2>
+            <span class="badge <?= $mySubmission->isGraded() ? 'bg-success' : 'bg-warning text-dark' ?>">
+                <?= $mySubmission->isGraded() ? 'Đã chấm' : 'Chờ chấm' ?>
+            </span>
+        </div>
+        <?php if ($mySubmission->isGraded()): ?>
+            <div class="metric-grid">
+                <div class="stat"><span class="stat__value"><?= $this->escapeHtml((string) $mySubmission->getScore()) ?></span><span class="stat__label">Điểm / 100</span></div>
+            </div>
+            <?php if (($mySubmission->getFeedback() ?? '') !== ''): ?>
+                <blockquote class="mt-lg"><?= $this->escapeHtml((string) $mySubmission->getFeedback()) ?></blockquote>
+            <?php endif; ?>
+        <?php else: ?>
+            <p class="muted">Đã nộp lúc <?= $this->escapeHtml(date('d/m/Y · H:i', strtotime((string) $mySubmission->getSubmittedAt()))) ?>.</p>
+            <?php /* Không hiển auto_score trước khi giáo viên chấm. */ ?>
+        <?php endif; ?>
+    </section>
+<?php endif; ?>
+
+<?php if (!$canSubmit): ?>
+    <section class="panel panel--tint mt-lg">
+        <div class="panel__head"><h2>Bài đã đóng</h2></div>
+        <p class="muted"><?= $assignment->isPastDeadline() ? 'Đã quá hạn nộp bài.' : 'Bài tập không còn nhận bài nộp.' ?></p>
+    </section>
+<?php elseif ($assignment->getType() === 'video'): ?>
+    <section class="panel panel--tint mt-lg">
+        <div class="panel__head"><h2>Nộp video</h2><span class="badge bg-secondary">Chưa hỗ trợ</span></div>
+        <p class="muted">Chức năng nộp video trực tiếp sẽ được bổ sung sau.</p>
+    </section>
+<?php elseif ($assignment->getType() === 'essay'): ?>
+    <form method="post" action="<?= $this->url('assignment_submit', ['id' => $assignment->getId()]) ?>"
+          class="panel form-grid mt-lg">
+        <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+        <div class="field field--wide">
+            <label for="essay_text">Bài làm của em</label>
+            <textarea class="field__control<?= isset($submitErrors['essay_text']) ? ' is-invalid' : '' ?>" id="essay_text" name="essay_text" rows="12" required><?= $this->escapeHtml((string) ($submitValues['essay_text'] ?? $mySubmission?->getEssayText() ?? '')) ?></textarea>
+            <span class="field__help<?= isset($submitErrors['essay_text']) ? ' field__help--error' : '' ?>"><?= $this->escapeHtml($submitErrors['essay_text'] ?? 'Kiểm tra lại nội dung trước khi nộp.') ?></span>
+        </div>
+        <div class="field--wide"><button class="btn" type="submit"><?= $mySubmission !== null ? 'Nộp lại bài' : 'Nộp bài' ?></button></div>
+    </form>
+<?php elseif ($assignment->getType() === 'quiz'): ?>
+    <?php if ($quizJson === []): ?>
+        <section class="panel panel--tint mt-lg"><p class="muted">Bài trắc nghiệm chưa có câu hỏi.</p></section>
+    <?php else: ?>
+        <form method="post" action="<?= $this->url('assignment_submit', ['id' => $assignment->getId()]) ?>"
+              class="assignment-stack mt-lg">
+            <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+            <?php foreach ($quizJson as $index => $question): ?>
+                <fieldset class="panel panel--tint">
+                    <legend class="legend"><?= ($index + 1) . '. ' . $this->escapeHtml((string) ($question['question'] ?? '')) ?></legend>
+                    <div class="choice-grid mt-lg">
+                        <?php foreach (($question['options'] ?? []) as $optionIndex => $option): ?>
+                            <?php $inputId = 'q' . $index . '_o' . $optionIndex; ?>
+                            <div class="choice">
+                                <input type="radio" name="answers[<?= (int) $index ?>]" value="<?= (int) $optionIndex ?>"
+                                       id="<?= $this->escapeHtmlAttr($inputId) ?>"
+                                       <?= isset($answers[$index]) && (int) $answers[$index] === (int) $optionIndex ? 'checked' : '' ?>>
+                                <label for="<?= $this->escapeHtmlAttr($inputId) ?>"><?= $this->escapeHtml((string) $option) ?></label>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </fieldset>
+            <?php endforeach; ?>
+            <button class="btn" type="submit"><?= $mySubmission !== null ? 'Nộp lại bài' : 'Nộp bài' ?></button>
+        </form>
+    <?php endif; ?>
+<?php endif; ?>

@@ -1,0 +1,94 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var string $role
+ * @var array<int, array{id:int,name:string,teacherName:string,studentCount:int,status:string}> $classrooms
+ */
+$isAdmin = $role === 'admin';
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow">Classroom</p>
+        <h1>Lớp học.</h1>
+        <p>Theo dõi sĩ số, giáo viên phụ trách và trạng thái của từng lớp.</p>
+    </div>
+    <?php if ($isAdmin): ?>
+        <div class="page-actions">
+            <a class="btn" href="<?= $this->url('classrooms', ['action' => 'create']) ?>">Tạo lớp học</a>
+        </div>
+    <?php endif; ?>
+</div>
+
+<?php if ($classrooms === []): ?>
+    <section class="panel panel--tint">
+        <div class="panel__head"><h2>Chưa có lớp học</h2></div>
+        <p class="muted"><?= $isAdmin ? 'Tạo lớp đầu tiên để bắt đầu xếp học sinh.' : 'Bạn chưa được phân công lớp nào.' ?></p>
+    </section>
+<?php else: ?>
+    <section class="panel">
+        <div class="panel__head">
+            <h2>Danh sách lớp</h2>
+            <span class="panel__meta"><?= count($classrooms) ?> lớp</span>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Tên lớp</th>
+                        <th scope="col">Giáo viên</th>
+                        <th scope="col">Sĩ số</th>
+                        <th scope="col">Trạng thái</th>
+                        <th scope="col">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($classrooms as $classroom): ?>
+                        <?php $archived = $classroom['status'] === 'archived'; ?>
+                        <tr>
+                            <td data-label="Tên lớp"><strong><?= $this->escapeHtml($classroom['name']) ?></strong></td>
+                            <td data-label="Giáo viên"><?= $this->escapeHtml($classroom['teacherName']) ?></td>
+                            <td data-label="Sĩ số"><?= (int) $classroom['studentCount'] ?> học sinh</td>
+                            <td data-label="Trạng thái">
+                                <span class="badge <?= $archived ? 'bg-secondary' : 'bg-success' ?>">
+                                    <?= $archived ? 'Đã lưu trữ' : 'Đang hoạt động' ?>
+                                </span>
+                            </td>
+                            <td data-label="Thao tác">
+                                <div class="button-row">
+                                    <?php if (!$isAdmin): ?>
+                                        <a class="btn btn--quiet"
+                                           href="<?= $this->url('assignments', [], ['query' => ['classroom' => $classroom['id']]]) ?>">
+                                            <?= $archived ? 'Xem bài tập' : 'Bài tập' ?>
+                                        </a>
+                                    <?php endif; ?>
+                                    <a class="btn btn--quiet"
+                                       href="<?= $this->url('attendance', [], ['query' => ['classroom' => $classroom['id']]]) ?>">
+                                        Điểm danh
+                                    </a>
+                                    <?php if (!$isAdmin): ?>
+                                        <a class="btn btn--quiet"
+                                           href="<?= $this->url('reports', [], ['query' => ['classroom' => $classroom['id']]]) ?>">
+                                            Report
+                                        </a>
+                                    <?php endif; ?>
+                                    <?php if (!$archived): ?>
+                                        <a class="btn btn--quiet"
+                                           href="<?= $this->url('classroom_students', ['id' => $classroom['id']]) ?>">
+                                            Học sinh
+                                        </a>
+                                    <?php endif; ?>
+                                    <?php if ($isAdmin): ?>
+                                        <a class="btn btn--outline"
+                                           href="<?= $this->url('classrooms', ['action' => 'edit', 'id' => $classroom['id']]) ?>">
+                                            Sửa lớp
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </section>
+<?php endif; ?>

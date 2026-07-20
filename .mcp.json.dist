@@ -1,0 +1,11 @@
+{
+  "_huong_dan": [
+    "File mẫu. Copy thành .mcp.json rồi điền server thật sự cần — .mcp.json commit vào repo,",
+    "cả team dùng chung, nên chỉ thêm khi có nhu cầu thật (khóa học: đừng tạo đủ mọi lớp từ ngày đầu).",
+    "Credential KHÔNG viết thẳng vào đây — dùng ${BIEN_MOI_TRUONG}, đặt giá trị ở máy cá nhân.",
+    "Tên package bên dưới là chỗ giữ chỗ: kiểm tra package tồn tại trước khi bật.",
+    "Với EnglishTrain, MCP đáng cân nhắc: MySQL read-only (soi schema/dữ liệu thật khi debug),",
+    "và S3-compatible cho R2 (soi object đã upload). Cả hai đều CHƯA cần cho tới khi làm phần video."
+  ],
+  "mcpServers": {}
+}

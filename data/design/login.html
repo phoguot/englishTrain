@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Đăng nhập — EnglishTrain</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="login-layout">
+    <section class="login-story">
+      <a class="brand" href="./index.html"><span class="brand__mark">ET</span><span class="brand__name">EnglishTrain</span></a>
+      <h1>Học có nhịp. Dạy có dấu.</h1>
+      <p>Một nơi gọn gàng để giao bài, nộp bài, điểm danh và ghi lại tiến bộ của từng học sinh.</p>
+    </section>
+    <section class="login-form-wrap">
+      <form class="login-form" action="./teacher-dashboard.html">
+        <div><p class="eyebrow">Chào mừng trở lại</p><h2>Đăng nhập</h2></div>
+        <div class="field">
+          <label for="username">Tên đăng nhập</label>
+          <input class="field__control" id="username" name="username" autocomplete="username" placeholder="Ví dụ: thanh.ha" required>
+          <span class="field__help">Dùng tài khoản do trung tâm cung cấp.</span>
+        </div>
+        <div class="field">
+          <label for="password">Mật khẩu</label>
+          <input class="field__control" id="password" name="password" type="password" autocomplete="current-password" required>
+          <span class="field__help">Mật khẩu phân biệt chữ hoa và chữ thường.</span>
+        </div>
+        <button class="btn" type="submit">Đăng nhập</button>
+        <a class="btn btn--quiet" href="./index.html">Quay lại bộ thiết kế</a>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

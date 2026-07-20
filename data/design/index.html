@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>EnglishTrain — Bộ thiết kế giao diện</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#noi-dung">Bỏ qua điều hướng</a>
+  <header class="topbar">
+    <a class="brand" href="./index.html" aria-label="EnglishTrain — Trang thiết kế">
+      <span class="brand__mark">ET</span><span class="brand__name">EnglishTrain</span>
+    </a>
+    <div class="topbar__actions">
+      <a class="btn btn--outline" href="./login.html">Xem đăng nhập</a>
+    </div>
+  </header>
+
+  <main class="page" id="noi-dung">
+    <section class="hub-hero">
+      <div>
+        <p class="eyebrow">Bản thiết kế hệ thống</p>
+        <h1>Một nhịp học, ba góc nhìn.</h1>
+      </div>
+      <div class="hub-hero__aside">
+        <p>Prototype cân bằng trải nghiệm quản trị viên, giáo viên và học sinh — cùng một ngôn ngữ thị giác, nhưng khác ưu tiên thao tác.</p>
+        <p class="muted">Hum / Playful premium · Dễ đọc, dễ bấm · Responsive 320–1440 px</p>
+      </div>
+    </section>
+
+    <div class="demo-note">Tất cả tên, lớp và số liệu trong prototype là dữ liệu minh họa.</div>
+
+    <section class="hub-grid" aria-label="Dashboard theo vai trò">
+      <a class="hub-card" href="./teacher-dashboard.html">
+        <span class="hub-card__number">01</span>
+        <div><h2>Giáo viên</h2><p>Nhìn lớp, bài chờ chấm, lịch dạy và report cần hoàn thiện.</p></div>
+      </a>
+      <a class="hub-card" href="./student-dashboard.html">
+        <span class="hub-card__number">02</span>
+        <div><h2>Học sinh</h2><p>Thấy việc cần làm trước, kết quả và nhận xét sau.</p></div>
+      </a>
+      <a class="hub-card" href="./admin-dashboard.html">
+        <span class="hub-card__number">03</span>
+        <div><h2>Quản trị</h2><p>Quản lý người dùng và lớp học với mật độ vừa đủ.</p></div>
+      </a>
+      <a class="hub-card" href="./assignment-submit.html"><span class="hub-card__number">04</span><div><h2>Làm bài</h2><p>Một luồng ngắn, rõ từng bước để học sinh tự tin hoàn thành.</p></div></a>
+      <a class="hub-card" href="./attendance.html"><span class="hub-card__number">05</span><div><h2>Điểm danh</h2><p>Trạng thái rõ màu, thao tác nhanh cho từng buổi học.</p></div></a>
+      <a class="hub-card" href="./my-reports.html"><span class="hub-card__number">06</span><div><h2>Tiến bộ</h2><p>Điểm số và lời nhận xét được kể lại bằng ngôn ngữ tích cực.</p></div></a>
+    </section>
+
+    <section class="panel panel--tint mt-3xl">
+      <div class="panel__head"><h2>Toàn bộ màn hình</h2><span class="panel__meta">14 trang</span></div>
+      <ul class="list">
+        <li class="list-item"><div class="list-item__main"><a class="list-item__title" href="./classrooms.html">Danh sách lớp học</a><p class="list-item__meta">Admin và teacher</p></div><span>Classroom →</span></li>
+        <li class="list-item"><div class="list-item__main"><a class="list-item__title" href="./classroom-detail.html">Chi tiết lớp và học sinh</a><p class="list-item__meta">Quản lý danh sách lớp</p></div><span>Classroom →</span></li>
+        <li class="list-item"><div class="list-item__main"><a class="list-item__title" href="./assignments.html">Danh sách bài tập</a><p class="list-item__meta">Lọc theo lớp và trạng thái</p></div><span>Assignment →</span></li>
+        <li class="list-item"><div class="list-item__main"><a class="list-item__title" href="./assignment-detail.html">Chi tiết và chấm bài</a><p class="list-item__meta">Teacher workflow</p></div><span>Assignment →</span></li>
+        <li class="list-item"><div class="list-item__main"><a class="list-item__title" href="./assignment-submit.html">Làm và nộp bài</a><p class="list-item__meta">Student workflow + upload video</p></div><span>Assignment →</span></li>
+        <li class="list-item"><div class="list-item__main"><a class="list-item__title" href="./attendance.html">Điểm danh buổi học</a><p class="list-item__meta">Bốn trạng thái chuyên cần</p></div><span>Attendance →</span></li>
+        <li class="list-item"><div class="list-item__main"><a class="list-item__title" href="./reports.html">Danh sách report</a><p class="list-item__meta">Draft và published</p></div><span>Report →</span></li>
+        <li class="list-item"><div class="list-item__main"><a class="list-item__title" href="./report-editor.html">Soạn report học sinh</a><p class="list-item__meta">Tham chiếu điểm và chuyên cần</p></div><span>Report →</span></li>
+        <li class="list-item"><div class="list-item__main"><a class="list-item__title" href="./my-reports.html">Report của tôi</a><p class="list-item__meta">Student view</p></div><span>Report →</span></li>
+      </ul>
+    </section>
+
+    <footer class="footer footer--statement"><strong>Mỗi buổi học là một bước tiến vui.</strong><span>EnglishTrain · Design concept 2026</span><a href="./README.md">Ghi chú thiết kế</a></footer>
+  </main>
+</body>
+</html>
