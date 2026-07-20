@@ -7,7 +7,12 @@
 
 # Claude Code — file cá nhân, không commit
 # (.claude/settings.json, rules/, agents/, commands/, skills/, hooks/ thì CÓ commit)
+# Cấu hình và hướng dẫn AI chỉ dùng trên máy local
+/.claude/
+/.codex/
+/.agents/skills/
+/AGENTS.md
+/CLAUDE.md
 CLAUDE.local.md
-.claude/settings.local.json
 .mcp.json
 .hallmark/
