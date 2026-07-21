@@ -145,6 +145,12 @@ class OAuthService
 
     private function isConfigured(string $provider): bool
     {
+        // Zalo: đăng ký ứng dụng phía Zalo chưa xong nên tạm ẩn khỏi mọi luồng OAuth
+        // (nút đăng nhập, liên kết) dù config có bật hay không. Bỏ dòng này khi Zalo sẵn sàng.
+        if ($provider === OAuthProviderType::ZALO) {
+            return false;
+        }
+
         $config = $this->config[$provider] ?? null;
 
         return is_array($config)

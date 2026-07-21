@@ -37,6 +37,14 @@
     });
   });
 
+  document.querySelectorAll('form[data-confirm-delete-assignment]').forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      if (!window.confirm('Bạn có chắc muốn xóa bài tập này? Toàn bộ bài nộp của học sinh cũng sẽ bị xóa, không thể hoàn tác.')) {
+        event.preventDefault();
+      }
+    });
+  });
+
   document.querySelectorAll('form[data-confirm-unlink]').forEach(function (form) {
     form.addEventListener('submit', function (event) {
       if (!window.confirm('Ngắt liên kết đăng nhập này?')) {

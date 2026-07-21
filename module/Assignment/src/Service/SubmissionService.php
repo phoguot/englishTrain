@@ -156,8 +156,9 @@ class SubmissionService
         $values = $filter->getValues();
         $mime   = (string) $values['mime'];
 
-        $key = $this->r2Storage->buildObjectKey($assignmentId, $studentId, $mime);
-        $url = $this->r2Storage->presignedUploadUrl($key, $mime, (int) $values['size']);
+        $student = $this->userService->find($studentId);
+        $key     = $this->r2Storage->buildObjectKey($assignmentId, $studentId, $mime, $student?->username ?? '');
+        $url     = $this->r2Storage->presignedUploadUrl($key, $mime, (int) $values['size']);
 
         return ['url' => $url, 'key' => $key, 'expires_in' => 900];
     }

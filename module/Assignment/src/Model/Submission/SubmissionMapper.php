@@ -191,6 +191,15 @@ class SubmissionMapper
         return $item;
     }
 
+    /** Xóa toàn bộ bài nộp của 1 assignment — dùng khi giáo viên xóa bài tập. */
+    public function deleteByAssignmentId(int $assignmentId): void
+    {
+        $sql    = $this->sql();
+        $delete = $sql->delete(SubmissionMapper::TABLE_NAME);
+        $delete->where(['assignment_id = ?' => $assignmentId]);
+        $sql->prepareStatementForSqlObject($delete)->execute();
+    }
+
     /** Chấm điểm: chỉ sửa score/feedback/status/graded_at — không đụng bài làm gốc. */
     public function updateAttrsGrade(int $submissionId, float $score, ?string $feedback): bool
     {

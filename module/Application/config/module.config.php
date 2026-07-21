@@ -106,6 +106,12 @@ return [
         ],
     ],
     'view_manager' => [
+        // ViewJsonStrategy bắt buộc phải khai ở đây thì JsonModel (AssignmentController::uploadUrlAction,
+        // uploadDoneAction, SubmissionController) mới được render bằng JSON renderer. Thiếu dòng này,
+        // Laminas vẫn dùng PhpRenderer mặc định + InjectTemplateListener tự gắn template theo quy ước
+        // "{module}/{controller}/{action}" (vd "assignment/assignment/upload-url") — không có file .phtml
+        // nào tên vậy nên resolver ném lỗi thay vì trả JSON.
+        'strategies'               => ['ViewJsonStrategy'],
         'display_not_found_reason' => false,
         'display_exceptions'       => false,
         'not_found_template'       => 'error/404',

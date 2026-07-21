@@ -126,6 +126,7 @@ class UserModel
             (int) $this->id,
             (string) $this->role,
             (string) $this->fullName,
+            (string) $this->username,
             $this->status,
         );
     }

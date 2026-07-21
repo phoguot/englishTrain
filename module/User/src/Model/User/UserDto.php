@@ -14,6 +14,7 @@ final readonly class UserDto
         public int $id,
         public string $role,
         public string $fullName,
+        public string $username,
         public int $status,
     ) {
     }

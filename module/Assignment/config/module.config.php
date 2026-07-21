@@ -54,6 +54,17 @@ return [
                     ],
                 ],
             ],
+            'assignment_delete' => [
+                'type'    => Segment::class,
+                'options' => [
+                    'route'       => '/assignments/delete/:id',
+                    'constraints' => ['id' => '[0-9]+'],
+                    'defaults'    => [
+                        'controller' => AssignmentController::class,
+                        'action'     => 'delete',
+                    ],
+                ],
+            ],
             'assignment_submit' => [
                 'type'    => Segment::class,
                 'options' => [

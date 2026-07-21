@@ -58,14 +58,21 @@ class R2StorageService
     }
 
     /**
-     * Sinh object key ngẫu nhiên, nhóm theo assignment/student — dùng lại ở completeVideoUpload
-     * để kiểm key trả về đúng thuộc bài nộp này (không tin key client gửi khống).
+     * Sinh object key nhóm theo assignment/student — dùng lại ở completeVideoUpload để kiểm key
+     * trả về đúng thuộc bài nộp này (không tin key client gửi khống).
+     *
+     * Tên file lấy theo "{username}_{ngày nộp ddmmyyyy}.{ext}" (vd "khanhvd_16072022.mov") để giáo
+     * viên tải về nhận ra ngay của học sinh nào, thay vì chuỗi ngẫu nhiên vô nghĩa.
      */
-    public function buildObjectKey(int $assignmentId, int $studentId, string $mime): string
+    public function buildObjectKey(int $assignmentId, int $studentId, string $mime, string $studentUsername): string
     {
-        $ext = self::ALLOWED_MIME_EXTENSIONS[$mime] ?? 'bin';
+        $ext  = self::ALLOWED_MIME_EXTENSIONS[$mime] ?? 'bin';
+        $slug = strtolower((string) preg_replace('/[^a-zA-Z0-9]/', '', $studentUsername));
+        if ($slug === '') {
+            $slug = 'student';
+        }
 
-        return sprintf('submissions/%d/%d/%s.%s', $assignmentId, $studentId, bin2hex(random_bytes(8)), $ext);
+        return sprintf('submissions/%d/%d/%s_%s.%s', $assignmentId, $studentId, $slug, date('dmY'), $ext);
     }
 
     /**
