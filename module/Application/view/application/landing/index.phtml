@@ -1,5 +1,6 @@
 <?php
 /** @var Laminas\View\Renderer\PhpRenderer $this */
+$isLoggedIn = $this->currentUser() !== null;
 ?>
 <a class="skip-link" href="#noi-dung">Bỏ qua điều hướng</a>
 
@@ -8,7 +9,11 @@
         <span class="brand__mark" aria-hidden="true">ET</span>
         <span class="brand__name">EnglishTrain</span>
     </a>
-    <a class="btn btn--outline" href="<?= $this->url('login') ?>">Đăng nhập</a>
+    <?php if ($isLoggedIn): ?>
+        <a class="btn btn--outline" href="<?= $this->url('dashboard') ?>">Vào trang tổng quan</a>
+    <?php else: ?>
+        <a class="btn btn--outline" href="<?= $this->url('login') ?>">Đăng nhập</a>
+    <?php endif; ?>
 </header>
 
 <main class="landing" id="noi-dung">
@@ -22,7 +27,11 @@
                 EnglishTrain giúp giáo viên giao bài, điểm danh và ghi nhận tiến bộ;
                 học sinh biết rõ việc cần làm và xem lại kết quả của mình.
             </p>
-            <a class="btn" href="<?= $this->url('login') ?>">Đăng nhập để bắt đầu</a>
+            <?php if ($isLoggedIn): ?>
+                <a class="btn" href="<?= $this->url('dashboard') ?>">Vào trang tổng quan</a>
+            <?php else: ?>
+                <a class="btn" href="<?= $this->url('login') ?>">Đăng nhập để bắt đầu</a>
+            <?php endif; ?>
         </div>
     </section>
 
