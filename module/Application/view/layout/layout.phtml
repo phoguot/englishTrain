@@ -122,6 +122,22 @@ $spaceLabels = [
     </div>
 <?php endif; ?>
 
+<!-- Popup xem video bài nộp (dùng chung cho màn chấm của giáo viên và màn admin video). -->
+<div class="modal fade" id="videoModal" tabindex="-1" aria-hidden="true" aria-labelledby="videoModalTitle">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="videoModalTitle">Xem video bài nộp</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <video id="videoModalPlayer" class="w-100 d-block" style="max-height:70vh" controls playsinline></video>
+                <p class="text-muted small mt-2 mb-0" data-video-modal-status></p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="<?= $this->basePath('js/app.js') ?>"></script>
 <script src="<?= $this->basePath('js/quiz-builder.js') ?>"></script>

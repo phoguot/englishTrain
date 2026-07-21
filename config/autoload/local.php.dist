@@ -23,7 +23,7 @@ return [
         "secret_key" => "",
         "bucket" => "english-train",
         // Giới hạn dung lượng mỗi video học sinh nộp (MB). Áp dụng ở JS, Filter và presigned URL.
-        "max_upload_mb" => 10,
+        "max_upload_mb" => 50,
     ],
     "oauth" => [
         "google" => ["enabled" => false, "client_id" => "", "client_secret" => ""],

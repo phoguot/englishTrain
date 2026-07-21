@@ -68,8 +68,6 @@ $formatSize = static fn (int $bytes): string => number_format($bytes / 1024 / 10
                                     <div data-video-view
                                          data-video-url-route="<?= $this->escapeHtmlAttr($this->url('admin_video_url', ['id' => $video['submissionId']])) ?>">
                                         <button class="btn btn--outline" type="button" data-video-view-btn>Xem video</button>
-                                        <video class="mt-lg d-block" style="max-width:100%" controls hidden data-video-player></video>
-                                        <span class="field__help" data-video-view-status></span>
                                     </div>
                                     <form method="post"
                                           action="<?= $this->url('admin_video_delete', ['id' => $video['submissionId']], ['query' => $studentId > 0 ? ['student' => $studentId] : []]) ?>"

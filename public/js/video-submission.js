@@ -114,14 +114,35 @@
     });
   });
 
-  // ── Xem video (teacher) ─────────────────────────────────────────────────
+  // ── Xem video trong popup (teacher + admin) ─────────────────────────────
+  const videoModalEl = document.getElementById('videoModal');
+  const videoModalPlayer = document.getElementById('videoModalPlayer');
+  const videoModalStatus = videoModalEl ? videoModalEl.querySelector('[data-video-modal-status]') : null;
+  const videoModal = (videoModalEl && window.bootstrap && window.bootstrap.Modal)
+    ? window.bootstrap.Modal.getOrCreateInstance(videoModalEl)
+    : null;
+
+  if (videoModalEl && videoModalPlayer) {
+    // Đóng popup: dừng phát + gỡ src để không tải ngầm và không phát tiếng nền.
+    videoModalEl.addEventListener('hidden.bs.modal', function () {
+      videoModalPlayer.pause();
+      videoModalPlayer.removeAttribute('src');
+      videoModalPlayer.load();
+      if (videoModalStatus) videoModalStatus.textContent = '';
+    });
+  }
+
   document.querySelectorAll('[data-video-view]').forEach(function (panel) {
     const button = panel.querySelector('[data-video-view-btn]');
-    const player = panel.querySelector('[data-video-player]');
     const status = panel.querySelector('[data-video-view-status]');
     if (!button) return;
 
     button.addEventListener('click', function () {
+      if (!videoModal || !videoModalPlayer) {
+        if (status) status.textContent = 'Trình phát video chưa sẵn sàng, vui lòng tải lại trang.';
+        return;
+      }
+
       button.disabled = true;
       if (status) status.textContent = 'Đang lấy đường dẫn video...';
 
@@ -133,16 +154,15 @@
           });
         })
         .then(function (data) {
-          if (player) {
-            player.src = data.url;
-            player.hidden = false;
-          }
           if (status) status.textContent = '';
-          button.hidden = true;
+          videoModalPlayer.src = data.url;
+          videoModal.show();
         })
         .catch(function (error) {
-          button.disabled = false;
           if (status) status.textContent = error.message || 'Có lỗi xảy ra.';
+        })
+        .finally(function () {
+          button.disabled = false;
         });
     });
   });

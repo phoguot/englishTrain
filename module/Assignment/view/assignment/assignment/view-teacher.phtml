@@ -113,8 +113,7 @@ $gradeErrors = $gradeErrors ?? [];
                         <div class="mt-lg" data-video-view
                              data-video-url-route="<?= $this->escapeHtmlAttr($this->url('submission_video_url', ['id' => $submission->getId()])) ?>">
                             <button class="btn btn--outline" type="button" data-video-view-btn>Xem video</button>
-                            <video class="mt-lg d-block" style="max-width:100%" controls hidden data-video-player></video>
-                            <span class="field__help" data-video-view-status></span>
+                            <span class="field__help d-block mt-2" data-video-view-status></span>
                         </div>
                     <?php endif; ?>
 

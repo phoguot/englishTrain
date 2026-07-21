@@ -36,7 +36,7 @@ class R2StorageService
         $accessKey  = (string) ($config['access_key'] ?? '');
         $secretKey  = (string) ($config['secret_key'] ?? '');
         $this->bucket         = (string) ($config['bucket'] ?? '');
-        $this->maxUploadBytes = (int) ($config['max_upload_mb'] ?? 10) * 1024 * 1024;
+        $this->maxUploadBytes = (int) ($config['max_upload_mb'] ?? 50) * 1024 * 1024;
 
         // Thiếu bất kỳ credential nào → presigned URL sẽ trỏ vào endpoint rỗng và upload chắc chắn
         // hỏng. Đánh dấu để Service báo lỗi rõ ràng thay vì để browser gặp lỗi mạng khó hiểu.
