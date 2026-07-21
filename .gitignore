@@ -16,5 +16,10 @@
 /AGENTS.md
 /CLAUDE.md
 CLAUDE.local.md
+/docs/
 .mcp.json
 .hallmark/
+
+# File .md chỉ để local, không commit (trừ README.md)
+*.md
+!/README.md
