@@ -121,6 +121,12 @@ class SubmissionService
         return $this->submissionMapper->getByAssignmentAndStudent($assignmentId, $studentId);
     }
 
+    /** R2 đã đủ credential để nộp video chưa. False = chưa cấu hình production. */
+    public function isVideoUploadConfigured(): bool
+    {
+        return $this->r2Storage->isConfigured();
+    }
+
     /** Hạn dung lượng video (MB) đọc từ config r2.max_upload_mb — cho view hiển thị, JS kiểm trước khi upload. */
     public function maxUploadMb(): int
     {

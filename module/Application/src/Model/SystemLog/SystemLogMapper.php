@@ -71,4 +71,34 @@ class SystemLogMapper
 
         return $out;
     }
+
+    /** Xóa một dòng log theo id. */
+    public function deleteSystemLog(int $id): void
+    {
+        $sql    = $this->sql();
+        $delete = $sql->delete(SystemLogMapper::TABLE_NAME);
+        $delete->where(['id = ?' => $id]);
+
+        $sql->prepareStatementForSqlObject($delete)->execute();
+    }
+
+    /**
+     * Xóa nhiều dòng log cùng lúc. Trả số dòng thực xóa.
+     *
+     * @param int[] $ids
+     */
+    public function deleteManySystemLog(array $ids): int
+    {
+        if ($ids === []) {
+            return 0;
+        }
+
+        $sql    = $this->sql();
+        $delete = $sql->delete(SystemLogMapper::TABLE_NAME);
+        $delete->where->in('id', $ids);
+
+        $result = $sql->prepareStatementForSqlObject($delete)->execute();
+
+        return $result->getAffectedRows();
+    }
 }

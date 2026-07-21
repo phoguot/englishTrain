@@ -18,6 +18,7 @@ use Classroom\Service\ClassroomService;
 use Interop\Container\ContainerInterface;
 use Laminas\Db\Adapter\Adapter;
 use Laminas\Router\Http\Literal;
+use Laminas\Router\Http\Segment;
 use User\Service\AuthService;
 use User\Service\UserService;
 
@@ -51,6 +52,27 @@ return [
                     'defaults' => [
                         'controller' => SystemLogController::class,
                         'action'     => 'index',
+                    ],
+                ],
+            ],
+            'system_log_delete' => [
+                'type'    => Segment::class,
+                'options' => [
+                    'route'       => '/system-logs/delete/:id',
+                    'constraints' => ['id' => '[0-9]+'],
+                    'defaults'    => [
+                        'controller' => SystemLogController::class,
+                        'action'     => 'delete',
+                    ],
+                ],
+            ],
+            'system_log_delete_many' => [
+                'type'    => Literal::class,
+                'options' => [
+                    'route'    => '/system-logs/delete',
+                    'defaults' => [
+                        'controller' => SystemLogController::class,
+                        'action'     => 'deleteMany',
                     ],
                 ],
             ],

@@ -201,6 +201,9 @@ class AssignmentController extends BaseController
         if (!$this->getRequest()->isPost()) {
             return $this->jsonError(405, 'Phương thức không hợp lệ.');
         }
+        if (!$this->submissionService->isVideoUploadConfigured()) {
+            return $this->jsonError(503, 'Chức năng nộp video chưa được cấu hình. Vui lòng liên hệ quản trị viên.');
+        }
 
         $id = (int) $this->params()->fromRoute('id', 0);
 

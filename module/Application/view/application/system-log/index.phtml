@@ -4,7 +4,11 @@
  * @var Application\Model\SystemLog\SystemLogModel[] $logs
  * @var ?string $level
  * @var int $limit
+ * @var string $csrfToken
  */
+// Giữ nguyên bộ lọc level khi xóa để quay lại đúng danh sách đang xem.
+$levelQuery   = $level !== null ? ['level' => $level] : [];
+$deleteMore   = $levelQuery === [] ? [] : ['query' => $levelQuery];
 // Key '' = không lọc (key null của mảng PHP tự thành '' nên dùng '' ngay từ đầu cho rõ).
 $levelTabs = [
     ''        => 'Tất cả',
@@ -49,19 +53,31 @@ $levelLabels = [
         <p class="muted">Hệ thống chưa ghi nhận lỗi nào<?= $level !== null ? ' ở mức độ đã lọc' : '' ?>. Đó là tin tốt.</p>
     </section>
 <?php else: ?>
+    <form method="post"
+          action="<?= $this->url('system_log_delete_many', [], $deleteMore) ?>"
+          data-log-form>
+        <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
     <section class="panel">
         <div class="panel__head">
             <h2>Danh sách lỗi</h2>
             <span class="panel__meta"><?= count($logs) ?> dòng</span>
+            <button type="submit" class="btn btn-outline-danger btn-sm" data-log-bulk-delete>
+                Xóa các dòng đã chọn
+            </button>
         </div>
         <div class="table-wrap">
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th scope="col">
+                            <input type="checkbox" data-log-select-all
+                                   aria-label="Chọn tất cả dòng log">
+                        </th>
                         <th scope="col">Thời điểm</th>
                         <th scope="col">Mức độ</th>
                         <th scope="col">Lỗi</th>
                         <th scope="col">Ngữ cảnh</th>
+                        <th scope="col">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -75,6 +91,11 @@ $levelLabels = [
                             : null;
                         ?>
                         <tr>
+                            <td data-label="Chọn">
+                                <input type="checkbox" name="ids[]" value="<?= (int) $log->getId() ?>"
+                                       data-log-checkbox
+                                       aria-label="Chọn dòng log #<?= (int) $log->getId() ?>">
+                            </td>
                             <td data-label="Thời điểm"><?= $this->escapeHtml((string) $log->getCreatedAt()) ?></td>
                             <td data-label="Mức độ">
                                 <span class="badge <?= $badgeClasses[$logLevel] ?? 'bg-secondary' ?>">
@@ -112,10 +133,18 @@ $levelLabels = [
                                     <?= $log->getIp() !== null ? ' · ' . $this->escapeHtml($log->getIp()) : '' ?>
                                 </span>
                             </td>
+                            <td data-label="Thao tác">
+                                <button type="submit" class="btn btn-outline-danger btn-sm"
+                                        data-log-delete-one
+                                        formaction="<?= $this->url('system_log_delete', ['id' => (int) $log->getId()], $deleteMore) ?>">
+                                    Xóa
+                                </button>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
     </section>
+    </form>
 <?php endif; ?>

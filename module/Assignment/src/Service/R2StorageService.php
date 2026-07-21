@@ -27,23 +27,37 @@ class R2StorageService
     private readonly S3Client $client;
     private readonly string $bucket;
     private readonly int $maxUploadBytes;
+    private readonly bool $configured;
 
     /** @param array<string,mixed> $config khối "r2" trong config/autoload/local.php */
     public function __construct(array $config)
     {
+        $accountId  = (string) ($config['account_id'] ?? '');
+        $accessKey  = (string) ($config['access_key'] ?? '');
+        $secretKey  = (string) ($config['secret_key'] ?? '');
         $this->bucket         = (string) ($config['bucket'] ?? '');
-        $this->maxUploadBytes = (int) ($config['max_upload_mb'] ?? 200) * 1024 * 1024;
+        $this->maxUploadBytes = (int) ($config['max_upload_mb'] ?? 10) * 1024 * 1024;
+
+        // Thiếu bất kỳ credential nào → presigned URL sẽ trỏ vào endpoint rỗng và upload chắc chắn
+        // hỏng. Đánh dấu để Service báo lỗi rõ ràng thay vì để browser gặp lỗi mạng khó hiểu.
+        $this->configured = $accountId !== '' && $accessKey !== '' && $secretKey !== '' && $this->bucket !== '';
 
         $this->client = new S3Client([
             'version'                 => 'latest',
             'region'                  => 'auto',
-            'endpoint'                => sprintf('https://%s.r2.cloudflarestorage.com', (string) ($config['account_id'] ?? '')),
+            'endpoint'                => sprintf('https://%s.r2.cloudflarestorage.com', $accountId),
             'use_path_style_endpoint' => true,
             'credentials'             => [
-                'key'    => (string) ($config['access_key'] ?? ''),
-                'secret' => (string) ($config['secret_key'] ?? ''),
+                'key'    => $accessKey,
+                'secret' => $secretKey,
             ],
         ]);
+    }
+
+    /** R2 đã có đủ credential để ký URL chưa. False = chưa cấu hình production, đừng cho nộp video. */
+    public function isConfigured(): bool
+    {
+        return $this->configured;
     }
 
     public function maxUploadBytes(): int

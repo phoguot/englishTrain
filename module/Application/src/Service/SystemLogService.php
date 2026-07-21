@@ -97,4 +97,32 @@ class SystemLogService
 
         return $this->systemLogMapper->searchSystemLog($level, $limit);
     }
+
+    /** Xóa một dòng log theo id — thao tác dọn dẹp của admin. */
+    public function delete(int $id): void
+    {
+        if ($id <= 0) {
+            return;
+        }
+
+        $this->systemLogMapper->deleteSystemLog($id);
+    }
+
+    /**
+     * Xóa nhiều dòng log cùng lúc. Bỏ qua id không hợp lệ (≤ 0, trùng). Trả số dòng thực xóa.
+     *
+     * @param array<int|string> $ids id thô từ checkbox — ép int và lọc tại đây, không tin dữ liệu POST.
+     */
+    public function deleteMany(array $ids): int
+    {
+        $clean = [];
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            if ($id > 0) {
+                $clean[$id] = $id;
+            }
+        }
+
+        return $this->systemLogMapper->deleteManySystemLog(array_values($clean));
+    }
 }

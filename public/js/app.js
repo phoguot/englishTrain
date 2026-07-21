@@ -61,6 +61,44 @@
     });
   });
 
+  // Trang log lỗi hệ thống: chọn tất cả + xác nhận xóa 1 dòng / xóa nhiều dòng đã chọn.
+  document.querySelectorAll('form[data-log-form]').forEach(function (form) {
+    const selectAll = form.querySelector('[data-log-select-all]');
+    const boxes = form.querySelectorAll('[data-log-checkbox]');
+
+    if (selectAll) {
+      selectAll.addEventListener('change', function () {
+        boxes.forEach(function (box) {
+          box.checked = selectAll.checked;
+        });
+      });
+    }
+
+    form.addEventListener('submit', function (event) {
+      const submitter = event.submitter;
+      if (submitter && submitter.hasAttribute('data-log-delete-one')) {
+        if (!window.confirm('Xóa dòng log này? Thao tác không thể hoàn tác.')) {
+          event.preventDefault();
+        }
+        return;
+      }
+
+      // Nút xóa nhiều: cần ít nhất 1 dòng được chọn.
+      let checked = 0;
+      boxes.forEach(function (box) {
+        if (box.checked) checked += 1;
+      });
+      if (checked === 0) {
+        window.alert('Vui lòng chọn ít nhất một dòng log để xóa.');
+        event.preventDefault();
+        return;
+      }
+      if (!window.confirm('Xóa ' + checked + ' dòng log đã chọn? Thao tác không thể hoàn tác.')) {
+        event.preventDefault();
+      }
+    });
+  });
+
   document.querySelectorAll('[data-counter]').forEach(function (counter) {
     const target = Number(counter.dataset.counter || 0);
     const pad = Number(counter.dataset.pad || 0);
