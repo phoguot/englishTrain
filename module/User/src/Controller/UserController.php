@@ -10,7 +10,9 @@ use Application\Exception\ValidationException;
 use Application\Service\UserAccountAdministrationService;
 use Laminas\View\Model\ViewModel;
 use User\Model\User\UserModel;
+use User\OAuth\OAuthProviderType;
 use User\Service\UserService;
+use User\Service\UserIdentityService;
 
 class UserController extends BaseController
 {
@@ -19,6 +21,7 @@ class UserController extends BaseController
     public function __construct(
         private readonly UserService $userService,
         private readonly UserAccountAdministrationService $accountAdministrationService,
+        private readonly UserIdentityService $identityService,
     ) {
     }
 
@@ -136,6 +139,10 @@ class UserController extends BaseController
             'editId' => $existing?->getId(),
             'values' => $values,
             'errors' => $errors,
+            'identities' => $existing !== null
+                ? $this->identityService->listForUser((int) $existing->getId())
+                : [],
+            'providerLabels' => OAuthProviderType::LABELS,
         ]);
         $model->setTemplate('user/user/form');
 

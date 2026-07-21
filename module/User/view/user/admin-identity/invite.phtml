@@ -1,0 +1,16 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var \User\Model\User\UserModel $user
+ * @var string $linkCode
+ */
+?>
+<div class="page-head">
+    <div class="page-head__copy"><p class="eyebrow">Mã liên kết</p><h1>Gửi mã cho <?= $this->escapeHtml((string) $user->getFullName()) ?>.</h1></div>
+    <div class="page-actions"><a class="btn btn--outline" href="<?= $this->url('user_edit', ['id' => (int) $user->getId()]) ?>">Quay lại</a></div>
+</div>
+<section class="panel">
+    <div class="alert alert-warning">Mã chỉ hiển thị trong trang này, dùng một lần và hết hạn sau 24 giờ. Mã cũ chưa dùng đã bị thu hồi.</div>
+    <label class="form-label" for="link-code-result">Mã liên kết</label>
+    <input class="form-control font-monospace" id="link-code-result" readonly value="<?= $this->escapeHtmlAttr($linkCode) ?>">
+</section>

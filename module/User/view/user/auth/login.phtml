@@ -4,6 +4,9 @@
  * @var string $csrfToken
  * @var string $username
  * @var array<string,string> $errors
+ * @var string[] $providers
+ * @var string[] $enabledProviders
+ * @var array<string,string> $providerLabels
  */
 ?>
 <main class="login-layout" id="noi-dung">
@@ -41,6 +44,25 @@
                 <span class="field__help"><?= isset($errors['password']) ? $this->escapeHtml($errors['password']) : 'Mật khẩu phân biệt chữ hoa và chữ thường.' ?></span>
             </div>
             <button class="btn" type="submit">Đăng nhập</button>
+            <div class="border-top pt-3 mt-3">
+                <p class="field__help">Hoặc đăng nhập bằng tài khoản đã liên kết:</p>
+                <div class="d-grid gap-2">
+                    <?php foreach ($providers as $provider): ?>
+                        <?php if (in_array($provider, $enabledProviders, true)): ?>
+                            <a class="btn btn--outline" href="<?= $this->url('oauth_start', ['provider' => $provider]) ?>">
+                                <?= $this->escapeHtml('Đăng nhập với ' . ($providerLabels[$provider] ?? $provider)) ?>
+                            </a>
+                        <?php else: ?>
+                            <button class="btn btn--outline" type="button" disabled
+                                    title="Nhà cung cấp này chưa được cấu hình">
+                                <?= $this->escapeHtml('Đăng nhập với ' . ($providerLabels[$provider] ?? $provider)) ?>
+                                <span class="badge bg-secondary ms-1">Chưa bật</span>
+                            </button>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <a class="field__help" href="<?= $this->url('link_account') ?>">Liên kết tài khoản lần đầu bằng mã của quản trị viên</a>
         </form>
     </section>
 </main>

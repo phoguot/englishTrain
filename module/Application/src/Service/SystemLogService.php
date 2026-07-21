@@ -46,7 +46,7 @@ class SystemLogService
 
             if ($request instanceof HttpRequest) {
                 $log->setRequestMethod(mb_substr($request->getMethod(), 0, 10));
-                $log->setRequestUri(mb_substr($request->getUriString(), 0, 500));
+                $log->setRequestUri(mb_substr($this->sanitizeRequestUri($request->getUriString()), 0, 500));
             }
 
             $log->setUserId($this->authService->currentUserId());
@@ -66,6 +66,15 @@ class SystemLogService
                 $e->getLine(),
             ));
         }
+    }
+
+    private function sanitizeRequestUri(string $uri): string
+    {
+        return (string) preg_replace(
+            '/([?&](?:code|state|token|access_token|refresh_token|id_token|client_secret|error_description)=)[^&#]*/i',
+            '$1[redacted]',
+            $uri,
+        );
     }
 
     /**

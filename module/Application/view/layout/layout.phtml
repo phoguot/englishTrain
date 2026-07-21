@@ -87,6 +87,11 @@ $spaceLabels = [
                         </li>
                     <?php endif; ?>
                     <li>
+                        <a class="side-nav__link" href="<?= $this->url('account_identities') ?>">
+                            Bảo mật tài khoản <span>↗</span>
+                        </a>
+                    </li>
+                    <li>
                         <form method="post" action="<?= $this->url('logout') ?>">
                             <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($user['csrfToken']) ?>">
                             <button class="side-nav__link border-0 bg-transparent w-100 text-start" type="submit">

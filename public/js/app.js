@@ -37,6 +37,14 @@
     });
   });
 
+  document.querySelectorAll('form[data-confirm-unlink]').forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      if (!window.confirm('Ngắt liên kết đăng nhập này?')) {
+        event.preventDefault();
+      }
+    });
+  });
+
   document.querySelectorAll('[data-counter]').forEach(function (counter) {
     const target = Number(counter.dataset.counter || 0);
     const pad = Number(counter.dataset.pad || 0);

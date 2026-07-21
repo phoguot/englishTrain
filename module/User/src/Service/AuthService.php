@@ -58,12 +58,19 @@ class AuthService
             return false;
         }
 
-        // Chống session fixation: đổi id session trước khi ghi danh tính.
-        SessionContainer::getDefaultManager()->regenerateId(true);
-        unset($this->session->csrf_token);
+        $this->establishSession((int) $user->getId(), (string) $user->getRole());
 
-        $this->session->user_id = (int) $user->getId();
-        $this->session->role    = (string) $user->getRole();
+        return true;
+    }
+
+    /** Đăng nhập một user nội bộ đã được xác thực bởi external identity. */
+    public function loginAsUser(int $userId): bool
+    {
+        $user = $this->userMapper->getUser($userId);
+        if ($user === null || !$user->isActive()) {
+            return false;
+        }
+        $this->establishSession((int) $user->getId(), (string) $user->getRole());
 
         return true;
     }
@@ -118,5 +125,13 @@ class AuthService
         }
 
         return false;
+    }
+
+    private function establishSession(int $userId, string $role): void
+    {
+        SessionContainer::getDefaultManager()->regenerateId(true);
+        unset($this->session->csrf_token);
+        $this->session->user_id = $userId;
+        $this->session->role = $role;
     }
 }

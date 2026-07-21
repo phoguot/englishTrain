@@ -6,6 +6,7 @@ namespace User\Model\User;
 
 use Laminas\Db\Adapter\Adapter;
 use Laminas\Db\Sql\Predicate\Like;
+use Laminas\Db\Sql\Expression;
 use Laminas\Db\Sql\Sql;
 
 /**
@@ -132,6 +133,16 @@ class UserMapper
         $delete->where(['id = ?' => $id]);
 
         return $sql->prepareStatementForSqlObject($delete)->execute()->getAffectedRows() > 0;
+    }
+
+    /** Khóa row user trong transaction hiện tại để serialize thao tác liên quan. */
+    public function lockUser(int $id): void
+    {
+        $sql = $this->sql();
+        $update = $sql->update(UserMapper::TABLE_NAME);
+        $update->set(['id' => new Expression('id')]);
+        $update->where(['id = ?' => $id]);
+        $sql->prepareStatementForSqlObject($update)->execute();
     }
 
     private function fieldExists(string $field, string $value, ?int $exceptId): bool

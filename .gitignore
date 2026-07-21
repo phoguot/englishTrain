@@ -1,5 +1,8 @@
 /vendor/
-/data/
+/data/*
+!/data/migrations/
+/data/migrations/*
+!/data/migrations/[0-9][0-9][0-9][0-9]_*.sql
 /config/autoload/local.php
 /config/autoload/development.local.php
 .idea/

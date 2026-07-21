@@ -6,6 +6,8 @@
  * @var array<string,mixed> $values
  * @var array<string,string> $errors
  * @var string $csrfToken
+ * @var \User\Model\UserIdentity\UserIdentityModel[] $identities
+ * @var array<string,string> $providerLabels
  */
 $action = $isEdit ? $this->url('user_edit', ['id' => $editId]) : $this->url('user_create');
 ?>
@@ -24,3 +26,35 @@ $action = $isEdit ? $this->url('user_edit', ['id' => $editId]) : $this->url('use
     <div class="field"><label for="status">Trạng thái</label><select class="field__control<?= isset($errors['status']) ? ' is-invalid' : '' ?>" id="status" name="status"><option value="1" <?= (int) $values['status'] === 1 ? 'selected' : '' ?>>Đang hoạt động</option><option value="0" <?= (int) $values['status'] === 0 ? 'selected' : '' ?>>Khóa</option></select><?php if (isset($errors['status'])): ?><span class="invalid-feedback"><?= $this->escapeHtml($errors['status']) ?></span><?php endif; ?></div>
     <div class="field field--wide"><button class="btn" type="submit"><?= $isEdit ? 'Lưu thay đổi' : 'Tạo tài khoản' ?></button> <a class="btn btn--quiet" href="<?= $this->url('users') ?>">Hủy</a></div>
 </form>
+<?php if ($isEdit): ?>
+    <section class="panel mt-4">
+        <div class="panel__head"><h2>Liên kết đăng nhập ngoài</h2><span class="panel__meta"><?= count($identities) ?> liên kết</span></div>
+        <form method="post" action="<?= $this->url('user_identity_invite', ['id' => (int) $editId]) ?>" class="mb-3">
+            <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+            <button class="btn btn--outline" type="submit">Tạo mã liên kết mới</button>
+        </form>
+        <?php if ($identities === []): ?>
+            <p class="muted mb-0">Tài khoản chưa liên kết Google, Facebook hoặc Zalo.</p>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead><tr><th scope="col">Nhà cung cấp</th><th scope="col">Email nhận diện</th><th scope="col" class="text-end">Thao tác</th></tr></thead>
+                    <tbody>
+                    <?php foreach ($identities as $identity): ?>
+                        <tr>
+                            <td><?= $this->escapeHtml($providerLabels[(string) $identity->getProvider()] ?? (string) $identity->getProvider()) ?></td>
+                            <td><?= $this->escapeHtml((string) ($identity->getProviderEmail() ?? '—')) ?></td>
+                            <td class="text-end">
+                                <form method="post" action="<?= $this->url('user_identity_revoke', ['id' => (int) $editId, 'provider' => (string) $identity->getProvider()]) ?>" class="d-inline" data-confirm-unlink>
+                                    <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+                                    <button class="btn btn--quiet" type="submit">Thu hồi</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </section>
+<?php endif; ?>

@@ -1,0 +1,54 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var string $csrfToken
+ * @var array{link_code:string,provider:string} $values
+ * @var array<string,string> $errors
+ * @var string[] $providers
+ * @var array<string,string> $providerLabels
+ */
+?>
+<main class="login-layout" id="noi-dung">
+    <section class="login-story">
+        <a class="brand" href="<?= $this->url('login') ?>">
+            <span class="brand__mark" aria-hidden="true">ET</span>
+            <span class="brand__name">EnglishTrain</span>
+        </a>
+        <h1>Liên kết đúng người.</h1>
+        <p>Mã do quản trị viên cấp chỉ dùng một lần và hết hạn sau 24 giờ.</p>
+    </section>
+    <section class="login-form-wrap">
+        <form class="login-form" method="post" action="<?= $this->url('link_account') ?>">
+            <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+            <?= $this->flashMessenger()->render('error', ['alert', 'alert-danger']) ?>
+            <div><p class="eyebrow">Liên kết lần đầu</p><h2>Nhập mã liên kết</h2></div>
+            <div class="field">
+                <label for="link_code">Mã liên kết</label>
+                <input class="field__control<?= isset($errors['link_code']) ? ' is-invalid' : '' ?>"
+                       id="link_code" name="link_code" maxlength="32" autocomplete="one-time-code"
+                       value="<?= $this->escapeHtmlAttr($values['link_code']) ?>" required>
+                <?php if (isset($errors['link_code'])): ?>
+                    <span class="invalid-feedback"><?= $this->escapeHtml($errors['link_code']) ?></span>
+                <?php endif; ?>
+            </div>
+            <div class="field">
+                <label for="provider">Nhà cung cấp</label>
+                <select class="field__control<?= isset($errors['provider']) ? ' is-invalid' : '' ?>"
+                        id="provider" name="provider" required>
+                    <?php foreach ($providers as $provider): ?>
+                        <option value="<?= $this->escapeHtmlAttr($provider) ?>" <?= $values['provider'] === $provider ? 'selected' : '' ?>>
+                            <?= $this->escapeHtml($providerLabels[$provider] ?? $provider) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <?php if ($providers === []): ?>
+                    <span class="field__help">Chưa có nhà cung cấp nào được cấu hình.</span>
+                <?php elseif (isset($errors['provider'])): ?>
+                    <span class="invalid-feedback"><?= $this->escapeHtml($errors['provider']) ?></span>
+                <?php endif; ?>
+            </div>
+            <button class="btn" type="submit" <?= $providers === [] ? 'disabled' : '' ?>>Tiếp tục liên kết</button>
+            <a class="field__help" href="<?= $this->url('login') ?>">Quay lại đăng nhập</a>
+        </form>
+    </section>
+</main>

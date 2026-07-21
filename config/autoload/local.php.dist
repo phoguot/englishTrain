@@ -3,6 +3,14 @@
 declare(strict_types=1);
 
 return [
+    "session_config" => [
+        // Đổi thành true trên production HTTPS; giữ false khi chạy localhost HTTP.
+        "cookie_secure" => false,
+    ],
+    "app" => [
+        // URL công khai tin cậy, không có dấu / cuối. Production bắt buộc HTTPS.
+        "public_base_url" => "http://localhost:8080",
+    ],
     "db" => [
         "database" => "english_train",
         "username" => "root",
@@ -15,5 +23,14 @@ return [
         "secret_key" => "",
         "bucket" => "english-train",
         "max_upload_mb" => 200,
+    ],
+    "oauth" => [
+        "google" => ["enabled" => false, "client_id" => "", "client_secret" => ""],
+        "facebook" => [
+            "enabled" => false,
+            "client_id" => "",
+            "client_secret" => "",
+        ],
+        "zalo" => ["enabled" => false, "client_id" => "", "client_secret" => ""],
     ],
 ];

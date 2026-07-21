@@ -7,6 +7,8 @@ namespace User\Service;
 use Application\Exception\AccessDeniedException;
 use Application\Exception\NotFoundException;
 use Application\Exception\ValidationException;
+use Laminas\Db\Adapter\Adapter;
+use Throwable;
 use User\Filter\User\UserListFilter;
 use User\Filter\User\UserSaveFilter;
 use User\Model\User\UserDto;
@@ -19,8 +21,11 @@ use User\Model\User\UserModel;
  */
 class UserService
 {
-    public function __construct(private readonly UserMapper $userMapper)
-    {
+    public function __construct(
+        private readonly UserMapper $userMapper,
+        private readonly UserIdentityService $identityService,
+        private readonly Adapter $adapter,
+    ) {
     }
 
     public function find(int $id): ?UserDto
@@ -107,8 +112,17 @@ class UserService
             throw new AccessDeniedException('Bạn không thể tự xóa tài khoản đang đăng nhập.');
         }
         $this->getEditable($id);
-        if (!$this->userMapper->deleteUser($id)) {
-            throw new NotFoundException('Tài khoản không còn tồn tại.');
+        $connection = $this->adapter->getDriver()->getConnection();
+        $connection->beginTransaction();
+        try {
+            $this->identityService->deleteAllForUser($id);
+            if (!$this->userMapper->deleteUser($id)) {
+                throw new NotFoundException('Tài khoản không còn tồn tại.');
+            }
+            $connection->commit();
+        } catch (Throwable $e) {
+            $connection->rollback();
+            throw $e;
         }
     }
 

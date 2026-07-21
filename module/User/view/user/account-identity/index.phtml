@@ -1,0 +1,49 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var string $csrfToken
+ * @var \User\Model\UserIdentity\UserIdentityModel[] $identities
+ * @var string[] $providers
+ * @var string[] $enabledProviders
+ * @var array<string,string> $providerLabels
+ */
+$linked = [];
+foreach ($identities as $identity) {
+    $linked[(string) $identity->getProvider()] = $identity;
+}
+?>
+<div class="page-head">
+    <div class="page-head__copy"><p class="eyebrow">Tài khoản</p><h1>Bảo mật đăng nhập.</h1></div>
+</div>
+<section class="panel">
+    <div class="panel__head"><h2>Tài khoản đã liên kết</h2><span class="panel__meta"><?= count($identities) ?> liên kết</span></div>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead><tr><th scope="col">Nhà cung cấp</th><th scope="col">Email nhận diện</th><th scope="col">Lần đăng nhập cuối</th><th scope="col" class="text-end">Thao tác</th></tr></thead>
+            <tbody>
+            <?php foreach ($providers as $provider): ?>
+                <?php $identity = $linked[$provider] ?? null; ?>
+                <tr>
+                    <td><strong><?= $this->escapeHtml($providerLabels[$provider] ?? $provider) ?></strong></td>
+                    <td><?= $this->escapeHtml((string) ($identity?->getProviderEmail() ?? '—')) ?></td>
+                    <td><?= $this->escapeHtml((string) ($identity?->getLastLoginAt() ?? '—')) ?></td>
+                    <td class="text-end">
+                        <?php if ($identity === null && in_array($provider, $enabledProviders, true)): ?>
+                            <form method="post" action="<?= $this->url('account_identity_link', ['provider' => $provider]) ?>" class="d-inline">
+                                <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+                                <button class="btn btn--outline" type="submit">Liên kết</button>
+                            </form>
+                        <?php elseif ($identity !== null): ?>
+                            <form method="post" action="<?= $this->url('account_identity_unlink', ['provider' => $provider]) ?>" class="d-inline" data-confirm-unlink>
+                                <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+                                <button class="btn btn--quiet" type="submit">Ngắt liên kết</button>
+                            </form>
+                        <?php else: ?><span class="muted">Chưa bật</span><?php endif; ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <p class="muted mb-0">Bạn vẫn có thể đăng nhập bằng tên đăng nhập và mật khẩu sau khi ngắt liên kết.</p>
+</section>

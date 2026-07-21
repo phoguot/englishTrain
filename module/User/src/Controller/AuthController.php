@@ -8,6 +8,8 @@ use Application\Controller\BaseController;
 use Application\Exception\AccessDeniedException;
 use Application\Exception\ValidationException;
 use User\Service\AuthService;
+use User\Service\OAuthService;
+use User\OAuth\OAuthProviderType;
 
 /**
  * Đăng nhập / đăng xuất. Công khai (ROLE_GUEST): trang login ai cũng vào được,
@@ -17,8 +19,10 @@ class AuthController extends BaseController
 {
     protected const ALLOWED_ROLES = [BaseController::ROLE_GUEST];
 
-    public function __construct(private readonly AuthService $auth)
-    {
+    public function __construct(
+        private readonly AuthService $auth,
+        private readonly OAuthService $oauthService,
+    ) {
     }
 
     public function loginAction(): mixed
@@ -47,13 +51,22 @@ class AuthController extends BaseController
             $model->setVariables([
                 'username' => is_scalar($post['username'] ?? null) ? (string) $post['username'] : '',
                 'errors' => $errors,
+                'providers' => OAuthProviderType::ALL,
+                'enabledProviders' => $this->oauthService->enabledProviders(),
+                'providerLabels' => OAuthProviderType::LABELS,
             ]);
 
             return $model;
         }
 
         $model = $this->getViewModel();
-        $model->setVariables(['username' => '', 'errors' => []]);
+        $model->setVariables([
+            'username' => '',
+            'errors' => [],
+            'providers' => OAuthProviderType::ALL,
+            'enabledProviders' => $this->oauthService->enabledProviders(),
+            'providerLabels' => OAuthProviderType::LABELS,
+        ]);
 
         return $model;
     }
