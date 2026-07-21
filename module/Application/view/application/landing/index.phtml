@@ -5,9 +5,9 @@ $isLoggedIn = $this->currentUser() !== null;
 <a class="skip-link" href="#noi-dung">Bỏ qua điều hướng</a>
 
 <header class="landing-nav">
-    <a class="brand" href="<?= $this->url('home') ?>" aria-label="EnglishTrain — Trang chủ">
-        <span class="brand__mark" aria-hidden="true">ET</span>
-        <span class="brand__name">EnglishTrain</span>
+    <a class="brand" href="<?= $this->url('home') ?>" aria-label="Study Lab — Trang chủ">
+        <span class="brand__mark" aria-hidden="true">SL</span>
+        <span class="brand__name">Study Lab</span>
     </a>
     <?php if ($isLoggedIn): ?>
         <a class="btn btn--outline" href="<?= $this->url('dashboard') ?>">Vào trang tổng quan</a>
@@ -24,7 +24,7 @@ $isLoggedIn = $this->currentUser() !== null;
         </div>
         <div class="landing-hero__aside">
             <p>
-                EnglishTrain giúp giáo viên giao bài, điểm danh và ghi nhận tiến bộ;
+                Study Lab giúp giáo viên giao bài, điểm danh và ghi nhận tiến bộ;
                 học sinh biết rõ việc cần làm và xem lại kết quả của mình.
             </p>
             <?php if ($isLoggedIn): ?>
@@ -75,5 +75,5 @@ $isLoggedIn = $this->currentUser() !== null;
 
 <footer class="landing-footer">
     <strong>Học từng chút, giỏi thêm mỗi ngày.</strong>
-    <span>EnglishTrain · Website quản lý lớp học tiếng Anh</span>
+    <span>Study Lab · Website quản lý lớp học tiếng Anh</span>
 </footer>

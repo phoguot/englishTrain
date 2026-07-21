@@ -15,7 +15,7 @@ $headings = [
     'teacher' => ['Không gian giáo viên', 'Chào ' . $fullName . '.', 'Lớp học, bài tập và điểm danh ở cùng một nhịp.'],
     'student' => ['Không gian học sinh', 'Chào ' . $fullName . '.', 'Mở lớp của em để xem bài tập và theo dõi chuyên cần.'],
 ];
-[$eyebrow, $heading, $lede] = $headings[$role] ?? ['EnglishTrain', 'Chào bạn.', ''];
+[$eyebrow, $heading, $lede] = $headings[$role] ?? ['Study Lab', 'Chào bạn.', ''];
 $formatDate = static function (?string $value): string {
     if ($value === null || strtotime($value) === false) {
         return 'Không hạn';

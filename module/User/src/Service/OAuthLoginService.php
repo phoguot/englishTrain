@@ -42,7 +42,7 @@ class OAuthLoginService
             if ($user === null) {
                 return new OAuthCompletion(
                     'link_account',
-                    'Tài khoản này chưa được liên kết với EnglishTrain.',
+                    'Tài khoản này chưa được liên kết với Study Lab.',
                     false,
                 );
             }
