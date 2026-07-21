@@ -285,6 +285,22 @@ class AssignmentService
     }
 
     /**
+     * Xóa bài tập. Chỉ teacher sở hữu lớp đang hoạt động chứa bài tập (dùng lại quyền như sửa).
+     * Xóa luôn bài nộp của học sinh cho bài tập này trước — tránh mồ côi dữ liệu trong bảng submission.
+     *
+     * @throws NotFoundException|AccessDeniedException
+     */
+    public function delete(int $id, int $userId): AssignmentModel
+    {
+        $assignment = $this->getEditable($id, $userId);
+
+        $this->submissionMapper->deleteByAssignmentId($id);
+        $this->assignmentMapper->deleteAssignment($id);
+
+        return $assignment;
+    }
+
+    /**
      * Chạy Filter + dựng quiz_json. NƠI DUY NHẤT kiểm giá trị đầu vào của bài tập.
      * Gom lỗi của cả hai rồi ném MỘT lần để người dùng thấy hết vấn đề, không phải sửa từng vòng.
      * quizJson được trả kèm trong $context của exception để controller render lại câu hỏi đã gõ.

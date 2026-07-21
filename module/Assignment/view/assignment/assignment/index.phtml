@@ -6,6 +6,7 @@
  * @var string $classroomName
  * @var bool $canEdit
  * @var array<int, array<string,mixed>> $assignments
+ * @var string $csrfToken
  */
 $isTeacher = $role === 'teacher';
 $typeLabels = ['essay' => 'Tự luận', 'quiz' => 'Trắc nghiệm', 'video' => 'Video'];
@@ -101,6 +102,10 @@ $statusBadges = [
                                     </a>
                                     <?php if ($canEdit): ?>
                                         <a class="btn btn--quiet" href="<?= $this->url('assignment_edit', ['id' => $assignment['id']]) ?>">Sửa</a>
+                                        <form method="post" action="<?= $this->url('assignment_delete', ['id' => $assignment['id']]) ?>" class="d-inline" data-confirm-delete-assignment>
+                                            <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+                                            <button type="submit" class="btn btn-outline-danger">Xóa</button>
+                                        </form>
                                     <?php endif; ?>
                                 </div>
                             </td>

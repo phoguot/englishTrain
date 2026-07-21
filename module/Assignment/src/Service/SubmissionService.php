@@ -156,8 +156,9 @@ class SubmissionService
         $values = $filter->getValues();
         $mime   = (string) $values['mime'];
 
-        $key = $this->r2Storage->buildObjectKey($assignmentId, $studentId, $mime);
-        $url = $this->r2Storage->presignedUploadUrl($key, $mime, (int) $values['size']);
+        $student = $this->userService->find($studentId);
+        $key     = $this->r2Storage->buildObjectKey($assignmentId, $studentId, $mime, $student?->username ?? '');
+        $url     = $this->r2Storage->presignedUploadUrl($key, $mime, (int) $values['size']);
 
         return ['url' => $url, 'key' => $key, 'expires_in' => 900];
     }
@@ -219,6 +220,101 @@ class SubmissionService
         }
 
         return $this->r2Storage->presignedViewUrl((string) $submission->getVideoKey());
+    }
+
+    /** URL xem video (presigned GET, hạn 1h) cho admin — không kiểm phụ trách lớp, admin xem toàn hệ thống. */
+    public function getVideoViewUrlForAdmin(int $submissionId): string
+    {
+        $submission = $this->submissionMapper->getSubmission($submissionId);
+        if ($submission === null || $submission->getVideoKey() === null) {
+            throw new NotFoundException('Bài nộp không tồn tại.');
+        }
+
+        return $this->r2Storage->presignedViewUrl((string) $submission->getVideoKey());
+    }
+
+    /**
+     * Danh sách toàn bộ bài nộp video trong hệ thống cho màn quản trị, kèm tên học sinh/lớp/bài
+     * tập để hiển thị — tránh N+1 bằng findMany thay vì loop find(). $studentId lọc 1 học sinh nếu > 0.
+     *
+     * @return array<int, array{
+     *   submissionId:int, studentId:int, studentName:string,
+     *   classroomId:int, classroomName:string,
+     *   assignmentId:int, assignmentTitle:string,
+     *   videoKey:string, videoSizeBytes:int, submittedAt:?string
+     * }>
+     */
+    public function listVideoSubmissionsForAdmin(int $studentId = 0): array
+    {
+        $submissions = $this->submissionMapper->searchVideoSubmissions($studentId);
+        if ($submissions === []) {
+            return [];
+        }
+
+        $assignmentIds = array_values(array_unique(array_map(
+            static fn (SubmissionModel $s): int => (int) $s->getAssignmentId(),
+            $submissions,
+        )));
+        $assignments = [];
+        foreach ($assignmentIds as $assignmentId) {
+            $assignment = $this->assignmentMapper->getAssignment($assignmentId);
+            if ($assignment !== null) {
+                $assignments[$assignmentId] = $assignment;
+            }
+        }
+
+        $studentIds = array_values(array_unique(array_map(
+            static fn (SubmissionModel $s): int => (int) $s->getStudentId(),
+            $submissions,
+        )));
+        $students = $this->userService->findMany($studentIds);
+
+        $classroomIds = array_values(array_unique(array_map(
+            static fn (AssignmentModel $a): int => (int) $a->getClassroomId(),
+            $assignments,
+        )));
+        $classrooms = $this->classroomService->findMany($classroomIds);
+
+        $rows = [];
+        foreach ($submissions as $s) {
+            $assignmentId = (int) $s->getAssignmentId();
+            $assignment   = $assignments[$assignmentId] ?? null;
+            $classroomId  = $assignment !== null ? (int) $assignment->getClassroomId() : 0;
+            $studentId2   = (int) $s->getStudentId();
+
+            $rows[] = [
+                'submissionId'    => (int) $s->getId(),
+                'studentId'       => $studentId2,
+                'studentName'     => $students[$studentId2]->fullName ?? '(không rõ)',
+                'classroomId'     => $classroomId,
+                'classroomName'   => $classrooms[$classroomId]->name ?? '(không rõ)',
+                'assignmentId'    => $assignmentId,
+                'assignmentTitle' => $assignment !== null ? (string) $assignment->getTitle() : '(không rõ)',
+                'videoKey'        => (string) $s->getVideoKey(),
+                'videoSizeBytes'  => (int) $s->getVideoSize(),
+                'submittedAt'     => $s->getSubmittedAt(),
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Xóa 1 video khỏi hệ thống: xóa file thật trên R2 TRƯỚC, xóa row submission SAU — nếu xóa
+     * row trước mà xóa R2 lỗi giữa chừng thì mất dấu vết để dọn lại file rác. Không có row =
+     * "chưa nộp" nên học sinh nộp lại video mới được ngay sau khi admin xóa.
+     *
+     * @throws NotFoundException
+     */
+    public function deleteVideoSubmissionForAdmin(int $submissionId): void
+    {
+        $submission = $this->submissionMapper->getSubmission($submissionId);
+        if ($submission === null || $submission->getVideoKey() === null) {
+            throw new NotFoundException('Không tìm thấy video.');
+        }
+
+        $this->r2Storage->deleteObject((string) $submission->getVideoKey());
+        $this->submissionMapper->deleteSubmission($submissionId);
     }
 
     /** Chỉ dùng cho luồng video (upload-url/upload-done) — khác getAssignmentForSubmission ở chỗ

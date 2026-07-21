@@ -1,0 +1,88 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var array<int, array{submissionId:int,studentId:int,studentName:string,classroomId:int,classroomName:string,assignmentId:int,assignmentTitle:string,videoKey:string,videoSizeBytes:int,submittedAt:?string}> $videos
+ * @var User\Model\User\UserDto[] $students
+ * @var int $studentId
+ * @var string $csrfToken
+ */
+$formatSize = static fn (int $bytes): string => number_format($bytes / 1024 / 1024, 1) . ' MB';
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow">Quản trị</p>
+        <h1>Video bài nộp.</h1>
+        <p>Toàn bộ video học sinh đã nộp trên hệ thống — xem dung lượng và xóa file trên Cloudflare khi cần.</p>
+    </div>
+</div>
+
+<form method="get" action="<?= $this->url('admin_videos') ?>" class="panel form-grid mb-4">
+    <div class="field field--wide">
+        <label for="student">Học sinh</label>
+        <select class="field__control" id="student" name="student" onchange="this.form.submit()">
+            <option value="0">Tất cả học sinh</option>
+            <?php foreach ($students as $student): ?>
+                <option value="<?= (int) $student->id ?>" <?= $studentId === $student->id ? 'selected' : '' ?>>
+                    <?= $this->escapeHtml($student->fullName) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div><button class="btn btn--outline" type="submit">Lọc</button></div>
+</form>
+
+<?php if ($videos === []): ?>
+    <div class="panel"><p class="muted">Không có video nào phù hợp.</p></div>
+<?php else: ?>
+    <section class="panel">
+        <div class="panel__head">
+            <h2>Danh sách video</h2>
+            <span class="panel__meta"><?= count($videos) ?> video</span>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Học sinh</th>
+                        <th scope="col">Lớp</th>
+                        <th scope="col">Bài tập</th>
+                        <th scope="col">Dung lượng</th>
+                        <th scope="col">Ngày nộp</th>
+                        <th scope="col">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($videos as $video): ?>
+                        <tr>
+                            <td data-label="Học sinh"><strong><?= $this->escapeHtml($video['studentName']) ?></strong></td>
+                            <td data-label="Lớp"><?= $this->escapeHtml($video['classroomName']) ?></td>
+                            <td data-label="Bài tập"><?= $this->escapeHtml($video['assignmentTitle']) ?></td>
+                            <td data-label="Dung lượng"><?= $this->escapeHtml($formatSize($video['videoSizeBytes'])) ?></td>
+                            <td data-label="Ngày nộp">
+                                <?= $video['submittedAt'] === null
+                                    ? '—'
+                                    : $this->escapeHtml(date('d/m/Y · H:i', strtotime((string) $video['submittedAt']))) ?>
+                            </td>
+                            <td data-label="Thao tác">
+                                <div class="button-row">
+                                    <div data-video-view
+                                         data-video-url-route="<?= $this->escapeHtmlAttr($this->url('admin_video_url', ['id' => $video['submissionId']])) ?>">
+                                        <button class="btn btn--outline" type="button" data-video-view-btn>Xem video</button>
+                                        <video class="mt-lg d-block" style="max-width:100%" controls hidden data-video-player></video>
+                                        <span class="field__help" data-video-view-status></span>
+                                    </div>
+                                    <form method="post"
+                                          action="<?= $this->url('admin_video_delete', ['id' => $video['submissionId']], ['query' => $studentId > 0 ? ['student' => $studentId] : []]) ?>"
+                                          class="d-inline" data-confirm-delete-video>
+                                        <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+                                        <button type="submit" class="btn btn-outline-danger">Xóa</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </section>
+<?php endif; ?>

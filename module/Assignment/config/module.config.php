@@ -6,6 +6,7 @@ namespace Assignment;
 
 use Assignment\Controller\AssignmentController;
 use Assignment\Controller\SubmissionController;
+use Assignment\Controller\VideoAdminController;
 use Assignment\Model\Assignment\AssignmentMapper;
 use Assignment\Model\Submission\SubmissionMapper;
 use Assignment\Service\AssignmentService;
@@ -51,6 +52,17 @@ return [
                     'defaults'    => [
                         'controller' => AssignmentController::class,
                         'action'     => 'edit',
+                    ],
+                ],
+            ],
+            'assignment_delete' => [
+                'type'    => Segment::class,
+                'options' => [
+                    'route'       => '/assignments/delete/:id',
+                    'constraints' => ['id' => '[0-9]+'],
+                    'defaults'    => [
+                        'controller' => AssignmentController::class,
+                        'action'     => 'delete',
                     ],
                 ],
             ],
@@ -123,6 +135,38 @@ return [
                     ],
                 ],
             ],
+            'admin_videos' => [
+                'type'    => Literal::class,
+                'options' => [
+                    'route'    => '/admin/videos',
+                    'defaults' => [
+                        'controller' => VideoAdminController::class,
+                        'action'     => 'index',
+                    ],
+                ],
+            ],
+            'admin_video_delete' => [
+                'type'    => Segment::class,
+                'options' => [
+                    'route'       => '/admin/videos/delete/:id',
+                    'constraints' => ['id' => '[0-9]+'],
+                    'defaults'    => [
+                        'controller' => VideoAdminController::class,
+                        'action'     => 'delete',
+                    ],
+                ],
+            ],
+            'admin_video_url' => [
+                'type'    => Segment::class,
+                'options' => [
+                    'route'       => '/admin/videos/:id/url',
+                    'constraints' => ['id' => '[0-9]+'],
+                    'defaults'    => [
+                        'controller' => VideoAdminController::class,
+                        'action'     => 'videoUrl',
+                    ],
+                ],
+            ],
         ],
     ],
     'controllers' => [
@@ -135,6 +179,11 @@ return [
                 ),
             SubmissionController::class => static fn (ContainerInterface $c): SubmissionController
                 => new SubmissionController($c->get(SubmissionService::class)),
+            VideoAdminController::class => static fn (ContainerInterface $c): VideoAdminController
+                => new VideoAdminController(
+                    $c->get(SubmissionService::class),
+                    $c->get(UserService::class),
+                ),
         ],
     ],
     'service_manager' => [

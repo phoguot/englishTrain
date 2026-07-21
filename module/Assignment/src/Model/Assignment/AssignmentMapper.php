@@ -127,4 +127,12 @@ class AssignmentMapper
 
         return $item;
     }
+
+    public function deleteAssignment(int $id): void
+    {
+        $sql    = $this->sql();
+        $delete = $sql->delete(AssignmentMapper::TABLE_NAME);
+        $delete->where(['id = ?' => $id]);
+        $sql->prepareStatementForSqlObject($delete)->execute();
+    }
 }

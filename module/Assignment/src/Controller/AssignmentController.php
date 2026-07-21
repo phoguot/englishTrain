@@ -19,7 +19,7 @@ use Laminas\View\Model\ViewModel;
 /**
  * CRUD bài tập + xem chi tiết + nộp bài (essay/quiz) + xin/ xác nhận upload video R2.
  * - index, view: teacher + student (Service lọc theo quyền sở hữu).
- * - create, edit: chỉ teacher (assertTeacher trong action).
+ * - create, edit, delete: chỉ teacher (assertTeacher trong action).
  * - submit: chỉ student.
  * - uploadUrl, uploadDone: chỉ student — luồng JSON riêng cho browser PUT thẳng R2.
  *
@@ -92,6 +92,25 @@ class AssignmentController extends BaseController
         }
 
         return $this->formView($assignment, [], [], $assignment->getQuizJson() ?? []);
+    }
+
+    public function deleteAction(): mixed
+    {
+        $this->assertTeacher();
+
+        if (!$this->getRequest()->isPost()) {
+            throw new AccessDeniedException('Chỉ chấp nhận xóa bài tập từ biểu mẫu xác nhận.');
+        }
+
+        $id = (int) $this->params()->fromRoute('id', 0);
+        $assignment = $this->assignmentService->delete($id, (int) $this->currentUserId());
+        $this->flashMessenger()->addSuccessMessage('Đã xóa bài tập "' . $assignment->getTitle() . '".');
+
+        return $this->redirect()->toRoute(
+            'assignments',
+            [],
+            ['query' => ['classroom' => (int) $assignment->getClassroomId()]],
+        );
     }
 
     public function viewAction(): mixed
