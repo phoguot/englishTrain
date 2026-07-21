@@ -237,6 +237,16 @@ svg {
   list-style: none;
 }
 
+/* Flash message render dạng <ul class="alert"><li>…</li></ul> — bỏ chấm marker */
+ul.alert {
+  padding-inline-start: var(--space-md);
+  list-style: none;
+}
+
+ul.alert > li {
+  list-style: none;
+}
+
 .side-nav__link {
   display: flex;
   align-items: center;
