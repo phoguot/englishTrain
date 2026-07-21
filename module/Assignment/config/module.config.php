@@ -11,6 +11,7 @@ use Assignment\Model\Submission\SubmissionMapper;
 use Assignment\Service\AssignmentService;
 use Assignment\Service\QuizGrader;
 use Assignment\Service\QuizJsonBuilder;
+use Assignment\Service\R2StorageService;
 use Assignment\Service\SubmissionService;
 use Classroom\Service\ClassroomService;
 use Interop\Container\ContainerInterface;
@@ -78,6 +79,28 @@ return [
                     ],
                 ],
             ],
+            'assignment_upload_url' => [
+                'type'    => Segment::class,
+                'options' => [
+                    'route'       => '/assignments/:id/upload-url',
+                    'constraints' => ['id' => '[0-9]+'],
+                    'defaults'    => [
+                        'controller' => AssignmentController::class,
+                        'action'     => 'uploadUrl',
+                    ],
+                ],
+            ],
+            'assignment_upload_done' => [
+                'type'    => Segment::class,
+                'options' => [
+                    'route'       => '/assignments/:id/upload-done',
+                    'constraints' => ['id' => '[0-9]+'],
+                    'defaults'    => [
+                        'controller' => AssignmentController::class,
+                        'action'     => 'uploadDone',
+                    ],
+                ],
+            ],
             'submission_grade' => [
                 'type'    => Segment::class,
                 'options' => [
@@ -86,6 +109,17 @@ return [
                     'defaults'    => [
                         'controller' => SubmissionController::class,
                         'action'     => 'grade',
+                    ],
+                ],
+            ],
+            'submission_video_url' => [
+                'type'    => Segment::class,
+                'options' => [
+                    'route'       => '/submissions/:id/video-url',
+                    'constraints' => ['id' => '[0-9]+'],
+                    'defaults'    => [
+                        'controller' => SubmissionController::class,
+                        'action'     => 'videoUrl',
                     ],
                 ],
             ],
@@ -111,6 +145,11 @@ return [
                 => new SubmissionMapper($c->get(Adapter::class)),
             QuizGrader::class        => static fn (): QuizGrader => new QuizGrader(),
             QuizJsonBuilder::class   => static fn (): QuizJsonBuilder => new QuizJsonBuilder(),
+            R2StorageService::class  => static function (ContainerInterface $c): R2StorageService {
+                $config = $c->get('config')['r2'] ?? [];
+
+                return new R2StorageService(is_array($config) ? $config : []);
+            },
             AssignmentService::class => static fn (ContainerInterface $c): AssignmentService
                 => new AssignmentService(
                     $c->get(AssignmentMapper::class),
@@ -125,6 +164,7 @@ return [
                     $c->get(ClassroomService::class),
                     $c->get(UserService::class),
                     $c->get(QuizGrader::class),
+                    $c->get(R2StorageService::class),
                 ),
         ],
     ],

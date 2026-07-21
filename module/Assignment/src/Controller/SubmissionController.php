@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace Assignment\Controller;
 
 use Application\Controller\BaseController;
+use Application\Exception\AccessDeniedException;
+use Application\Exception\NotFoundException;
 use Application\Exception\ValidationException;
 use Assignment\Service\SubmissionService;
+use Laminas\View\Model\JsonModel;
 use Laminas\View\Model\ViewModel;
 
 /**
- * Chấm điểm bài nộp. Chỉ teacher — Service kiểm sở hữu lớp chứa bài tập của bài nộp.
- * Controller không validate: đưa POST thô cho Service, Service chạy GradeFilter.
+ * Chấm điểm bài nộp + xin URL xem video. Chỉ teacher — Service kiểm sở hữu lớp chứa bài tập
+ * của bài nộp. Controller không validate: đưa POST thô cho Service, Service chạy GradeFilter.
  */
 class SubmissionController extends BaseController
 {
@@ -54,5 +57,21 @@ class SubmissionController extends BaseController
         }
 
         return $this->redirect()->toRoute('assignment_view', ['id' => $assignmentId]);
+    }
+
+    /** Xin presigned GET URL (hạn 1h) để xem video một bài nộp — chỉ giáo viên phụ trách lớp. */
+    public function videoUrlAction(): JsonModel
+    {
+        $submissionId = (int) $this->params()->fromRoute('id', 0);
+
+        try {
+            $url = $this->submissionService->getVideoViewUrlForTeacher($submissionId, (int) $this->currentUserId());
+        } catch (NotFoundException|AccessDeniedException $e) {
+            $this->getResponse()->setStatusCode($e instanceof NotFoundException ? 404 : 403);
+
+            return new JsonModel(['error' => $e->getMessage()]);
+        }
+
+        return new JsonModel(['url' => $url]);
     }
 }

@@ -186,9 +186,20 @@ abstract class BaseController extends AbstractActionController
         }
     }
 
+    /**
+     * Form HTML gửi `_csrf` qua POST thường (form-urlencoded). API JSON (fetch với
+     * Content-Type: application/json, ví dụ luồng upload-url/upload-done của Assignment) không
+     * có dữ liệu POST kiểu form — token nằm trong JSON body, đọc qua getPostParamsApi().
+     * Kiểm cả 2 nguồn để không phải bỏ qua bước này ở controller con.
+     */
     protected function assertValidCsrfToken(): void
     {
-        if (!$this->authService->isValidCsrfToken($this->getRequest()->getPost('_csrf'))) {
+        $token = $this->getRequest()->getPost('_csrf');
+        if ($token === null) {
+            $token = $this->getPostParamsApi()['_csrf'] ?? null;
+        }
+
+        if (!$this->authService->isValidCsrfToken($token)) {
             throw new AccessDeniedException('Phiên biểu mẫu không hợp lệ. Vui lòng tải lại trang và thử lại.');
         }
     }

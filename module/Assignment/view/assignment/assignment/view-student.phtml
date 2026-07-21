@@ -5,6 +5,8 @@
  * @var \Assignment\Model\Submission\SubmissionModel|null $mySubmission
  * @var array<string,mixed> $submitValues
  * @var array<string,string> $submitErrors
+ * @var int $maxUploadMb
+ * @var string[] $allowedVideoMimeTypes
  */
 $typeLabels = ['essay' => 'Tự luận', 'quiz' => 'Trắc nghiệm', 'video' => 'Video'];
 $quizJson = $assignment->getQuizJson() ?? [];
@@ -60,9 +62,25 @@ $answers = is_array($submitValues['answers'] ?? null)
         <p class="muted"><?= $assignment->isPastDeadline() ? 'Đã quá hạn nộp bài.' : 'Bài tập không còn nhận bài nộp.' ?></p>
     </section>
 <?php elseif ($assignment->getType() === 'video'): ?>
-    <section class="panel panel--tint mt-lg">
-        <div class="panel__head"><h2>Nộp video</h2><span class="badge bg-secondary">Chưa hỗ trợ</span></div>
-        <p class="muted">Chức năng nộp video trực tiếp sẽ được bổ sung sau.</p>
+    <section class="panel panel--tint mt-lg" data-video-upload
+              data-upload-url="<?= $this->escapeHtmlAttr($this->url('assignment_upload_url', ['id' => $assignment->getId()])) ?>"
+              data-upload-done="<?= $this->escapeHtmlAttr($this->url('assignment_upload_done', ['id' => $assignment->getId()])) ?>"
+              data-csrf="<?= $this->escapeHtmlAttr($csrfToken) ?>"
+              data-max-mb="<?= (int) $maxUploadMb ?>"
+              data-accept="<?= $this->escapeHtmlAttr(implode(',', $allowedVideoMimeTypes)) ?>">
+        <div class="panel__head"><h2>Nộp video</h2></div>
+        <div class="field field--wide">
+            <label for="video_file">Chọn file video (tối đa <?= (int) $maxUploadMb ?> MB)</label>
+            <input class="field__control" type="file" id="video_file"
+                   accept="<?= $this->escapeHtmlAttr(implode(',', $allowedVideoMimeTypes)) ?>" data-video-input>
+        </div>
+        <div class="field--wide" data-video-progress-wrap hidden>
+            <div class="progress"><div class="progress-bar" role="progressbar" data-video-progress style="width:0%"></div></div>
+            <span class="field__help" data-video-status></span>
+        </div>
+        <div class="field--wide">
+            <button class="btn" type="button" data-video-submit><?= $mySubmission !== null ? 'Nộp lại video' : 'Nộp video' ?></button>
+        </div>
     </section>
 <?php elseif ($assignment->getType() === 'essay'): ?>
     <form method="post" action="<?= $this->url('assignment_submit', ['id' => $assignment->getId()]) ?>"

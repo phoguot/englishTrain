@@ -6,23 +6,29 @@ namespace Assignment\Controller;
 
 use Application\Controller\BaseController;
 use Application\Exception\AccessDeniedException;
+use Application\Exception\NotFoundException;
 use Application\Exception\ValidationException;
+use Assignment\Exception\AssignmentClosedException;
 use Assignment\Model\Assignment\AssignmentModel;
 use Assignment\Service\AssignmentService;
 use Assignment\Service\SubmissionService;
 use Classroom\Service\ClassroomService;
+use Laminas\View\Model\JsonModel;
 use Laminas\View\Model\ViewModel;
 
 /**
- * CRUD bài tập + xem chi tiết + nộp bài (essay/quiz).
+ * CRUD bài tập + xem chi tiết + nộp bài (essay/quiz) + xin/ xác nhận upload video R2.
  * - index, view: teacher + student (Service lọc theo quyền sở hữu).
  * - create, edit: chỉ teacher (assertTeacher trong action).
  * - submit: chỉ student.
+ * - uploadUrl, uploadDone: chỉ student — luồng JSON riêng cho browser PUT thẳng R2.
  *
  * Controller KHÔNG validate và KHÔNG kiểm value — đưa POST thô cho Service, Service chạy
  * Filter class rồi ném ValidationException; ở đây chỉ lo render lại form / flash lỗi.
  *
- * Upload video (upload-url, upload-done) CHƯA làm ở bước này — xem docs/03-modules.md bước 6.
+ * uploadUrlAction/uploadDoneAction là API JSON (không phải form HTML) nên tự bắt exception
+ * ngay tại action thay vì để onDispatch() render trang lỗi HTML — hợp đồng JSON luôn trả
+ * {error: string} kèm mã HTTP đúng nghĩa, xem docs/04-contracts.md.
  */
 class AssignmentController extends BaseController
 {
@@ -112,6 +118,8 @@ class AssignmentController extends BaseController
         $model->setVariable('mySubmission', $this->submissionService->getMySubmission($id, $userId));
         $model->setVariable('submitValues', []);
         $model->setVariable('submitErrors', []);
+        $model->setVariable('maxUploadMb', $this->submissionService->maxUploadMb());
+        $model->setVariable('allowedVideoMimeTypes', $this->submissionService->allowedVideoMimeTypes());
         $model->setTemplate('assignment/assignment/view-student');
 
         return $model;
@@ -145,7 +153,8 @@ class AssignmentController extends BaseController
                 $this->submissionService->submitQuiz($id, $studentId, $post);
                 $this->flashMessenger()->addSuccessMessage('Đã nộp bài. Điểm trắc nghiệm được chấm tự động.');
             } else {
-                $this->flashMessenger()->addErrorMessage('Bài tập dạng video chưa hỗ trợ nộp trực tiếp.');
+                // Video nộp qua luồng JSON riêng (uploadUrlAction/uploadDoneAction), không qua form này.
+                $this->flashMessenger()->addErrorMessage('Bài tập dạng video: dùng nút "Nộp video" ở trang chi tiết bài tập.');
             }
         } catch (ValidationException $e) {
             $model = $this->getViewModel();
@@ -164,6 +173,64 @@ class AssignmentController extends BaseController
         return $this->redirect()->toRoute('assignment_view', ['id' => $id]);
     }
 
+    /** Bước 1/3 nộp video: xin presigned PUT URL. Chỉ student. JSON — xem docs/04-contracts.md. */
+    public function uploadUrlAction(): JsonModel
+    {
+        if ($this->currentRole() !== 'student') {
+            return $this->jsonError(403, 'Chỉ học sinh được nộp bài.');
+        }
+        if (!$this->getRequest()->isPost()) {
+            return $this->jsonError(405, 'Phương thức không hợp lệ.');
+        }
+
+        $id = (int) $this->params()->fromRoute('id', 0);
+
+        try {
+            $result = $this->submissionService->requestVideoUploadUrl(
+                $id,
+                (int) $this->currentUserId(),
+                $this->getPostParamsApi(),
+            );
+        } catch (NotFoundException|AccessDeniedException $e) {
+            return $this->jsonError(403, $e->getMessage());
+        } catch (AssignmentClosedException $e) {
+            return $this->jsonError(409, $e->getMessage());
+        } catch (ValidationException $e) {
+            return $this->jsonError(422, $this->firstErrorMessage($e));
+        }
+
+        return new JsonModel($result);
+    }
+
+    /** Bước 3/3 nộp video: xác nhận đã upload xong → tạo submission. Chỉ student. */
+    public function uploadDoneAction(): JsonModel
+    {
+        if ($this->currentRole() !== 'student') {
+            return $this->jsonError(403, 'Chỉ học sinh được nộp bài.');
+        }
+        if (!$this->getRequest()->isPost()) {
+            return $this->jsonError(405, 'Phương thức không hợp lệ.');
+        }
+
+        $id = (int) $this->params()->fromRoute('id', 0);
+
+        try {
+            $submission = $this->submissionService->completeVideoUpload(
+                $id,
+                (int) $this->currentUserId(),
+                $this->getPostParamsApi(),
+            );
+        } catch (NotFoundException|AccessDeniedException $e) {
+            return $this->jsonError(403, $e->getMessage());
+        } catch (AssignmentClosedException $e) {
+            return $this->jsonError(409, $e->getMessage());
+        } catch (ValidationException $e) {
+            return $this->jsonError(422, $this->firstErrorMessage($e));
+        }
+
+        return new JsonModel(['submission_id' => $submission->getId(), 'status' => $submission->getStatus()]);
+    }
+
     // ── Nội bộ ──────────────────────────────────────────────────────────────
 
     private function assertTeacher(): void
@@ -171,6 +238,21 @@ class AssignmentController extends BaseController
         if ($this->currentRole() !== 'teacher') {
             throw new AccessDeniedException('Chỉ giáo viên được tạo/sửa bài tập.');
         }
+    }
+
+    private function jsonError(int $status, string $message): JsonModel
+    {
+        $this->getResponse()->setStatusCode($status);
+
+        return new JsonModel(['error' => $message]);
+    }
+
+    /** Gộp lỗi ValidationException thành 1 câu — hợp đồng JSON chỉ có 1 {error: string}. */
+    private function firstErrorMessage(ValidationException $e): string
+    {
+        $errors = $e->getErrors();
+
+        return $errors === [] ? $e->getMessage() : (string) reset($errors);
     }
 
     private function handleSave(?AssignmentModel $existing): mixed

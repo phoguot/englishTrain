@@ -51,7 +51,6 @@ class AuthController extends BaseController
             $model->setVariables([
                 'username' => is_scalar($post['username'] ?? null) ? (string) $post['username'] : '',
                 'errors' => $errors,
-                'providers' => OAuthProviderType::ALL,
                 'enabledProviders' => $this->oauthService->enabledProviders(),
                 'providerLabels' => OAuthProviderType::LABELS,
             ]);
@@ -63,7 +62,6 @@ class AuthController extends BaseController
         $model->setVariables([
             'username' => '',
             'errors' => [],
-            'providers' => OAuthProviderType::ALL,
             'enabledProviders' => $this->oauthService->enabledProviders(),
             'providerLabels' => OAuthProviderType::LABELS,
         ]);

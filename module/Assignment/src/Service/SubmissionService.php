@@ -7,8 +7,10 @@ namespace Assignment\Service;
 use Application\Exception\AccessDeniedException;
 use Application\Exception\NotFoundException;
 use Application\Exception\ValidationException;
+use Assignment\Exception\AssignmentClosedException;
 use Assignment\Filter\Submission\EssaySubmitFilter;
 use Assignment\Filter\Submission\GradeFilter;
+use Assignment\Filter\Submission\VideoUploadUrlFilter;
 use Assignment\Model\Assignment\AssignmentMapper;
 use Assignment\Model\Assignment\AssignmentModel;
 use Assignment\Model\Submission\SubmissionMapper;
@@ -28,6 +30,7 @@ class SubmissionService
         private readonly ClassroomService $classroomService,
         private readonly UserService $userService,
         private readonly QuizGrader $quizGrader,
+        private readonly R2StorageService $r2Storage,
     ) {
     }
 
@@ -116,6 +119,123 @@ class SubmissionService
     public function getMySubmission(int $assignmentId, int $studentId): ?SubmissionModel
     {
         return $this->submissionMapper->getByAssignmentAndStudent($assignmentId, $studentId);
+    }
+
+    /** Hạn dung lượng video (MB) đọc từ config r2.max_upload_mb — cho view hiển thị, JS kiểm trước khi upload. */
+    public function maxUploadMb(): int
+    {
+        return (int) round($this->r2Storage->maxUploadBytes() / 1024 / 1024);
+    }
+
+    /** @return string[] mime video được chấp nhận — cho input[accept] ở view. */
+    public function allowedVideoMimeTypes(): array
+    {
+        return $this->r2Storage->allowedMimeTypes();
+    }
+
+    /**
+     * Bước 1/3 nộp video: xin presigned PUT URL. Kiểm quyền + bài còn nhận bài TRƯỚC khi ký URL —
+     * ký xong mới kiểm là đã lộ quyền ghi. Nhận POST THÔ — validate bằng VideoUploadUrlFilter tại đây.
+     *
+     * @param array<string,mixed> $data dữ liệu POST thô: filename, size, mime
+     * @return array{url:string,key:string,expires_in:int}
+     * @throws ValidationException|AssignmentClosedException
+     */
+    public function requestVideoUploadUrl(int $assignmentId, int $studentId, array $data): array
+    {
+        $assignment = $this->getAssignmentForVideoSubmission($assignmentId, $studentId);
+        if (!$assignment->acceptsSubmission()) {
+            throw new AssignmentClosedException('Bài tập đã đóng.');
+        }
+
+        $filter = new VideoUploadUrlFilter($this->r2Storage);
+        $filter->setData($data);
+        if (!$filter->isValid()) {
+            throw ValidationException::fromFilterMessages($filter->getMessages());
+        }
+        $values = $filter->getValues();
+        $mime   = (string) $values['mime'];
+
+        $key = $this->r2Storage->buildObjectKey($assignmentId, $studentId, $mime);
+        $url = $this->r2Storage->presignedUploadUrl($key, $mime, (int) $values['size']);
+
+        return ['url' => $url, 'key' => $key, 'expires_in' => 900];
+    }
+
+    /**
+     * Bước 3/3 nộp video: xác nhận đã upload xong → tạo/ghi đè submission. Không tin `key`/`size`
+     * client gửi mù quáng: kiểm key đúng thuộc assignment/student này (tiền tố do buildObjectKey
+     * sinh ra) rồi gọi headObject thật trên R2 lấy size xác thực — client gọi khống (chưa upload
+     * thật) sẽ bị từ chối ở đây thay vì tạo submission rỗng.
+     *
+     * @param array<string,mixed> $data dữ liệu POST thô: key, size
+     * @throws ValidationException|AssignmentClosedException
+     */
+    public function completeVideoUpload(int $assignmentId, int $studentId, array $data): SubmissionModel
+    {
+        $assignment = $this->getAssignmentForVideoSubmission($assignmentId, $studentId);
+        if (!$assignment->acceptsSubmission()) {
+            throw new AssignmentClosedException('Bài tập đã đóng.');
+        }
+
+        $key = is_string($data['key'] ?? null) ? trim($data['key']) : '';
+        $expectedPrefix = sprintf('submissions/%d/%d/', $assignmentId, $studentId);
+        if ($key === '' || !str_starts_with($key, $expectedPrefix)) {
+            throw new ValidationException(['key' => 'Không xác định được file đã tải lên.']);
+        }
+
+        $actualSize = $this->r2Storage->actualObjectSize($key);
+        if ($actualSize === null) {
+            throw new ValidationException(['key' => 'Chưa tìm thấy file trên hệ thống lưu trữ. Vui lòng thử tải lên lại.']);
+        }
+
+        $model = new SubmissionModel();
+        $model->setAssignmentId((int) $assignment->getId());
+        $model->setStudentId($studentId);
+        $model->setStatus(SubmissionModel::STATUS_SUBMITTED);
+        $model->setVideoKey($key);
+        $model->setVideoSize($actualSize);
+        $model->setSubmittedAt(date('Y-m-d H:i:s'));
+
+        return $this->submissionMapper->upsertSubmission($model);
+    }
+
+    /**
+     * URL xem video (presigned GET, hạn 1h) cho giáo viên chấm bài — chỉ giáo viên phụ trách
+     * lớp chứa assignment của submission này. Ký MỚI mỗi lần gọi, không cache URL cũ.
+     *
+     * @throws NotFoundException|AccessDeniedException
+     */
+    public function getVideoViewUrlForTeacher(int $submissionId, int $teacherId): string
+    {
+        $submission = $this->submissionMapper->getSubmission($submissionId);
+        if ($submission === null || $submission->getVideoKey() === null) {
+            throw new NotFoundException('Bài nộp không tồn tại.');
+        }
+
+        $assignment = $this->assignmentMapper->getAssignment((int) $submission->getAssignmentId());
+        if ($assignment === null || !$this->classroomService->isTeacherOf($teacherId, (int) $assignment->getClassroomId())) {
+            throw new AccessDeniedException('Bạn không phụ trách lớp này.');
+        }
+
+        return $this->r2Storage->presignedViewUrl((string) $submission->getVideoKey());
+    }
+
+    /** Chỉ dùng cho luồng video (upload-url/upload-done) — khác getAssignmentForSubmission ở chỗ
+     * không kiểm loại essay/quiz mà bắt buộc đúng loại video. */
+    private function getAssignmentForVideoSubmission(int $assignmentId, int $studentId): AssignmentModel
+    {
+        $assignment = $this->assignmentMapper->getAssignment($assignmentId);
+
+        if ($assignment === null
+            || !$this->classroomService->isStudentIn($studentId, (int) $assignment->getClassroomId())
+            || !$assignment->isPublished()
+            || $assignment->getType() !== AssignmentModel::TYPE_VIDEO
+        ) {
+            throw new NotFoundException('Bạn không thuộc lớp này.');
+        }
+
+        return $assignment;
     }
 
     /**
