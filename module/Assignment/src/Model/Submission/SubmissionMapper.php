@@ -200,6 +200,39 @@ class SubmissionMapper
         $sql->prepareStatementForSqlObject($delete)->execute();
     }
 
+    /** Xóa 1 bài nộp — dùng khi admin xóa video (không có row = "chưa nộp", học sinh nộp lại được). */
+    public function deleteSubmission(int $id): void
+    {
+        $sql    = $this->sql();
+        $delete = $sql->delete(SubmissionMapper::TABLE_NAME);
+        $delete->where(['id = ?' => $id]);
+        $sql->prepareStatementForSqlObject($delete)->execute();
+    }
+
+    /**
+     * Toàn bộ bài nộp video trong hệ thống (video_key khác NULL) — cho màn quản trị xem theo
+     * học sinh + xóa file trên R2. $studentId lọc theo 1 học sinh nếu > 0.
+     *
+     * @return SubmissionModel[]
+     */
+    public function searchVideoSubmissions(int $studentId = 0): array
+    {
+        $sql    = $this->sql();
+        $select = $sql->select(SubmissionMapper::TABLE_NAME);
+        $select->where->isNotNull('video_key');
+        if ($studentId > 0) {
+            $select->where(['student_id = ?' => $studentId]);
+        }
+        $select->order('submitted_at DESC');
+
+        $out = [];
+        foreach ($sql->prepareStatementForSqlObject($select)->execute() as $row) {
+            $out[] = (new SubmissionModel())->exchangeArray((array) $row);
+        }
+
+        return $out;
+    }
+
     /** Chấm điểm: chỉ sửa score/feedback/status/graded_at — không đụng bài làm gốc. */
     public function updateAttrsGrade(int $submissionId, float $score, ?string $feedback): bool
     {

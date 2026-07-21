@@ -45,6 +45,14 @@
     });
   });
 
+  document.querySelectorAll('form[data-confirm-delete-video]').forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      if (!window.confirm('Bạn có chắc muốn xóa video này khỏi hệ thống lưu trữ? Học sinh sẽ cần nộp lại, không thể hoàn tác.')) {
+        event.preventDefault();
+      }
+    });
+  });
+
   document.querySelectorAll('form[data-confirm-unlink]').forEach(function (form) {
     form.addEventListener('submit', function (event) {
       if (!window.confirm('Ngắt liên kết đăng nhập này?')) {

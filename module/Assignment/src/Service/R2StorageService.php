@@ -99,6 +99,13 @@ class R2StorageService
         return (string) $this->client->createPresignedRequest($command, self::VIEW_TTL)->getUri();
     }
 
+    /** Xóa hẳn file trên R2 — dùng khi admin xóa video khỏi màn quản trị. Idempotent: object không
+     * tồn tại vẫn coi là thành công (S3 DeleteObject không báo lỗi trong trường hợp đó). */
+    public function deleteObject(string $key): void
+    {
+        $this->client->deleteObject(['Bucket' => $this->bucket, 'Key' => $key]);
+    }
+
     /**
      * Kích thước thật của object trên R2, null nếu không tồn tại — dùng để phát hiện
      * client gọi upload-done khống (mất mạng giữa chừng, hoặc không upload thật).
