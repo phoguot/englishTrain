@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace User\Filter\Auth;
 
+use Laminas\Filter\Boolean;
 use Laminas\Filter\StringTrim;
 use Laminas\Filter\StripTags;
 use Laminas\InputFilter\InputFilter;
@@ -38,6 +39,15 @@ class LoginFilter extends InputFilter
             'validators' => [
                 ['name' => NotEmpty::class, 'options' => ['messages' => [NotEmpty::IS_EMPTY => 'Vui lòng nhập mật khẩu.']]],
             ],
+        ]);
+
+        // Checkbox "ghi nhớ đăng nhập" — không bắt buộc, không có giá trị sai, chỉ chuẩn hóa
+        // input HTML checkbox (có mặt = tick, vắng mặt = không tick) thành true/false thật sự.
+        $this->add([
+            'name'       => 'remember_me',
+            'required'   => false,
+            'filters'    => [['name' => Boolean::class, 'options' => ['type' => Boolean::TYPE_ALL]]],
+            'validators' => [],
         ]);
     }
 }

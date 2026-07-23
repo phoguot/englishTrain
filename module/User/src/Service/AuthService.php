@@ -20,6 +20,8 @@ class AuthService
 
     private SessionContainer $session;
 
+    private bool $lastRememberMeRequested = false;
+
     public function __construct(private readonly UserMapper $userMapper)
     {
         $this->session = new SessionContainer(self::SESSION_NS);
@@ -47,6 +49,7 @@ class AuthService
         $values   = $filter->getValues();
         $username = (string) $values['username'];
         $password = (string) $values['password'];
+        $this->lastRememberMeRequested = (bool) ($values['remember_me'] ?? false);
 
         $user = $this->userMapper->getUserByUsername($username);
         if ($user === null || !$user->isActive()) {
@@ -61,6 +64,12 @@ class AuthService
         $this->establishSession((int) $user->getId(), (string) $user->getRole());
 
         return true;
+    }
+
+    /** Checkbox "ghi nhớ đăng nhập" của lần attempt() gần nhất — đọc SAU KHI attempt() trả true. */
+    public function wantedRememberMe(): bool
+    {
+        return $this->lastRememberMeRequested;
     }
 
     /** Đăng nhập một user nội bộ đã được xác thực bởi external identity. */

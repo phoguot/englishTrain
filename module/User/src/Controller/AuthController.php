@@ -41,7 +41,7 @@ class AuthController extends BaseController
             $errors = [];
             try {
                 if ($this->auth->attempt($post)) {
-                    if (!empty($post['remember_me'])) {
+                    if ($this->auth->wantedRememberMe()) {
                         $userId = $this->auth->currentUserId();
                         if ($userId !== null) {
                             $this->getResponse()->getHeaders()->addHeader($this->rememberMe->issueCookie($userId));

@@ -267,11 +267,15 @@ abstract class BaseController extends AbstractActionController
             return null;
         }
 
+        // Cookie đã rotate trong DB ở consumeCookie() — phải gửi cookie mới cho trình duyệt
+        // NGAY CẢ KHI loginAsUser() thất bại (vd tài khoản vừa bị khóa), nếu không lần sau
+        // trình duyệt gửi lại cookie cũ (hash không còn khớp) và bị hiểu nhầm là cookie bị lộ,
+        // kéo theo thu hồi oan toàn bộ thiết bị của user.
+        $e->getResponse()->getHeaders()->addHeader($result['cookie']);
+
         if (!$this->authService->loginAsUser($result['userId'])) {
             return null;
         }
-
-        $e->getResponse()->getHeaders()->addHeader($result['cookie']);
 
         return $result['userId'];
     }
