@@ -24,6 +24,7 @@ class UserService
     public function __construct(
         private readonly UserMapper $userMapper,
         private readonly UserIdentityService $identityService,
+        private readonly RememberMeService $rememberMeService,
         private readonly Adapter $adapter,
     ) {
     }
@@ -102,8 +103,15 @@ class UserService
         $user = $this->getEditable($id);
         $values = $this->validate($data, $id);
         $this->fill($user, $values, false);
+        $saved = $this->userMapper->saveUser($user);
 
-        return $this->userMapper->saveUser($user);
+        if ((string) ($values['password'] ?? '') !== '') {
+            // Đổi mật khẩu phải thu hồi mọi cookie "ghi nhớ đăng nhập" đang phát hành —
+            // remember-me bỏ qua bước nhập mật khẩu nên thiết bị cũ phải đăng nhập lại.
+            $this->rememberMeService->revokeAllForUser($id);
+        }
+
+        return $saved;
     }
 
     public function delete(int $id, int $actorId): void
@@ -116,6 +124,7 @@ class UserService
         $connection->beginTransaction();
         try {
             $this->identityService->deleteAllForUser($id);
+            $this->rememberMeService->purgeAllForUser($id);
             if (!$this->userMapper->deleteUser($id)) {
                 throw new NotFoundException('Tài khoản không còn tồn tại.');
             }

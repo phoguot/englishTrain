@@ -20,6 +20,7 @@ use Laminas\Db\Adapter\Adapter;
 use Laminas\Router\Http\Literal;
 use Laminas\Router\Http\Segment;
 use User\Service\AuthService;
+use User\Service\RememberMeService;
 use User\Service\UserService;
 
 return [
@@ -91,6 +92,7 @@ return [
             static function (ContainerInterface $container, object $instance): void {
                 if ($instance instanceof BaseController) {
                     $instance->setAuthService($container->get(AuthService::class));
+                    $instance->setRememberMeService($container->get(RememberMeService::class));
                     $instance->setContainer($container);
                 }
             },

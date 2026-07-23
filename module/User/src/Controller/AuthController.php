@@ -9,6 +9,7 @@ use Application\Exception\AccessDeniedException;
 use Application\Exception\ValidationException;
 use User\Service\AuthService;
 use User\Service\OAuthService;
+use User\Service\RememberMeService;
 use User\OAuth\OAuthProviderType;
 
 /**
@@ -22,6 +23,7 @@ class AuthController extends BaseController
     public function __construct(
         private readonly AuthService $auth,
         private readonly OAuthService $oauthService,
+        private readonly RememberMeService $rememberMe,
     ) {
     }
 
@@ -39,6 +41,13 @@ class AuthController extends BaseController
             $errors = [];
             try {
                 if ($this->auth->attempt($post)) {
+                    if (!empty($post['remember_me'])) {
+                        $userId = $this->auth->currentUserId();
+                        if ($userId !== null) {
+                            $this->getResponse()->getHeaders()->addHeader($this->rememberMe->issueCookie($userId));
+                        }
+                    }
+
                     return $this->redirect()->toRoute('dashboard');
                 }
 
@@ -74,6 +83,16 @@ class AuthController extends BaseController
         if (!$this->getRequest()->isPost()) {
             throw new AccessDeniedException('Vui lòng đăng xuất bằng nút xác nhận trong hệ thống.');
         }
+
+        $cookieHeader = $this->getRequest()->getCookie();
+        $raw = $cookieHeader !== false && $cookieHeader->offsetExists(RememberMeService::COOKIE_NAME)
+            ? $cookieHeader->offsetGet(RememberMeService::COOKIE_NAME)
+            : null;
+        if (is_string($raw) && $raw !== '') {
+            $this->rememberMe->revokeCookie($raw);
+        }
+        $this->getResponse()->getHeaders()->addHeader($this->rememberMe->clearCookie());
+
         $this->auth->logout();
         $this->flashMessenger()->addSuccessMessage('Bạn đã đăng xuất.');
 

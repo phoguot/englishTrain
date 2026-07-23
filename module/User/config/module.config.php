@@ -22,6 +22,7 @@ use User\Model\User\UserMapper;
 use User\Model\OAuthLinkThrottle\OAuthLinkThrottleMapper;
 use User\Model\UserIdentity\UserIdentityMapper;
 use User\Model\UserLinkToken\UserLinkTokenMapper;
+use User\Model\UserRememberToken\UserRememberTokenMapper;
 use User\OAuth\FacebookProvider;
 use User\OAuth\GoogleProvider;
 use User\OAuth\OAuthProviderRegistry;
@@ -30,6 +31,7 @@ use User\OAuth\ZaloProvider;
 use User\Service\AuthService;
 use User\Service\OAuthService;
 use User\Service\OAuthLoginService;
+use User\Service\RememberMeService;
 use User\Service\UserIdentityService;
 use User\Service\UserLinkTokenService;
 use User\Service\UserService;
@@ -134,7 +136,11 @@ return [
     'controllers' => [
         'factories' => [
             AuthController::class => static fn (ContainerInterface $c): AuthController
-                => new AuthController($c->get(AuthService::class), $c->get(OAuthService::class)),
+                => new AuthController(
+                    $c->get(AuthService::class),
+                    $c->get(OAuthService::class),
+                    $c->get(RememberMeService::class),
+                ),
             OAuthController::class => static fn (ContainerInterface $c): OAuthController
                 => new OAuthController(
                     $c->get(OAuthService::class),
@@ -166,10 +172,23 @@ return [
                 => new UserIdentityMapper($c->get(Adapter::class)),
             UserLinkTokenMapper::class => static fn (ContainerInterface $c): UserLinkTokenMapper
                 => new UserLinkTokenMapper($c->get(Adapter::class)),
+            UserRememberTokenMapper::class => static fn (ContainerInterface $c): UserRememberTokenMapper
+                => new UserRememberTokenMapper($c->get(Adapter::class)),
             OAuthLinkThrottleMapper::class => static fn (ContainerInterface $c): OAuthLinkThrottleMapper
                 => new OAuthLinkThrottleMapper($c->get(Adapter::class)),
             AuthService::class => static fn (ContainerInterface $c): AuthService
                 => new AuthService($c->get(UserMapper::class)),
+            RememberMeService::class => static function (ContainerInterface $c): RememberMeService {
+                $config = $c->get('config');
+                $authConfig = is_array($config['auth'] ?? null) ? $config['auth'] : [];
+                $sessionConfig = is_array($config['session_config'] ?? null) ? $config['session_config'] : [];
+
+                return new RememberMeService(
+                    $c->get(UserRememberTokenMapper::class),
+                    (int) ($authConfig['remember_me_days'] ?? 60),
+                    (bool) ($sessionConfig['cookie_secure'] ?? false),
+                );
+            },
             UserIdentityService::class => static fn (ContainerInterface $c): UserIdentityService
                 => new UserIdentityService(
                     $c->get(Adapter::class),
@@ -188,6 +207,7 @@ return [
                 => new UserService(
                     $c->get(UserMapper::class),
                     $c->get(UserIdentityService::class),
+                    $c->get(RememberMeService::class),
                     $c->get(Adapter::class),
                 ),
             OAuthProviderType::HTTP_CLIENT_SERVICE => static function (): Client {

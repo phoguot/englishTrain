@@ -13,6 +13,7 @@ use Laminas\Mvc\MvcEvent;
 use Laminas\View\Model\ViewModel;
 use RuntimeException;
 use User\Service\AuthService;
+use User\Service\RememberMeService;
 use User\Service\UserService;
 
 /**
@@ -45,6 +46,8 @@ abstract class BaseController extends AbstractActionController
 
     protected AuthService $authService;
 
+    protected RememberMeService $rememberMeService;
+
     protected ?ViewModel $viewModel = null;
 
     protected ?ContainerInterface $container = null;
@@ -52,6 +55,11 @@ abstract class BaseController extends AbstractActionController
     public function setAuthService(AuthService $authService): void
     {
         $this->authService = $authService;
+    }
+
+    public function setRememberMeService(RememberMeService $rememberMeService): void
+    {
+        $this->rememberMeService = $rememberMeService;
     }
 
     public function getViewModel(): ViewModel
@@ -215,6 +223,9 @@ abstract class BaseController extends AbstractActionController
 
         $userId = $this->authService->currentUserId();
         if ($userId === null) {
+            $userId = $this->tryRememberMeLogin($e);
+        }
+        if ($userId === null) {
             return $this->redirectToLogin($e);
         }
 
@@ -229,6 +240,40 @@ abstract class BaseController extends AbstractActionController
         }
 
         return null;
+    }
+
+    /**
+     * Tự đăng nhập bằng cookie "ghi nhớ đăng nhập" khi session đã hết (đóng trình duyệt,
+     * hết idle timeout). Chỉ áp dụng cho GET — auto-login trên POST sẽ sinh CSRF token mới
+     * trong khi form đang gửi token cũ, luôn fail và mở edge case login-CSRF không cần thiết.
+     */
+    private function tryRememberMeLogin(MvcEvent $e): ?int
+    {
+        if (!$this->getRequest()->isGet()) {
+            return null;
+        }
+
+        $cookieHeader = $this->getRequest()->getCookie();
+        $raw = $cookieHeader !== false && $cookieHeader->offsetExists(RememberMeService::COOKIE_NAME)
+            ? $cookieHeader->offsetGet(RememberMeService::COOKIE_NAME)
+            : null;
+        if (!is_string($raw) || $raw === '') {
+            return null;
+        }
+
+        $result = $this->rememberMeService->consumeCookie($raw);
+        if ($result === null) {
+            $e->getResponse()->getHeaders()->addHeader($this->rememberMeService->clearCookie());
+            return null;
+        }
+
+        if (!$this->authService->loginAsUser($result['userId'])) {
+            return null;
+        }
+
+        $e->getResponse()->getHeaders()->addHeader($result['cookie']);
+
+        return $result['userId'];
     }
 
     protected function currentUserId(): ?int
