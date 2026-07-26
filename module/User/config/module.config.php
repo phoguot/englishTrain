@@ -16,12 +16,14 @@ use User\Controller\AuthController;
 use User\Controller\AccountIdentityController;
 use User\Controller\AdminIdentityController;
 use User\Controller\IdentityController;
+use User\Controller\MagicLinkController;
 use User\Controller\OAuthController;
 use User\Controller\UserController;
 use User\Model\User\UserMapper;
 use User\Model\OAuthLinkThrottle\OAuthLinkThrottleMapper;
 use User\Model\UserIdentity\UserIdentityMapper;
 use User\Model\UserLinkToken\UserLinkTokenMapper;
+use User\Model\UserLoginToken\UserLoginTokenMapper;
 use User\Model\UserRememberToken\UserRememberTokenMapper;
 use User\OAuth\FacebookProvider;
 use User\OAuth\GoogleProvider;
@@ -29,6 +31,7 @@ use User\OAuth\OAuthProviderRegistry;
 use User\OAuth\OAuthProviderType;
 use User\OAuth\ZaloProvider;
 use User\Service\AuthService;
+use User\Service\MagicLinkService;
 use User\Service\OAuthService;
 use User\Service\OAuthLoginService;
 use User\Service\RememberMeService;
@@ -131,6 +134,23 @@ return [
                 'type' => Segment::class,
                 'options' => ['route' => '/users/delete/:id', 'constraints' => ['id' => '[0-9]+'], 'defaults' => ['controller' => UserController::class, 'action' => 'delete']],
             ],
+            'magic_link_create' => [
+                'type' => Segment::class,
+                'options' => [
+                    'route' => '/users/:id/magic-link',
+                    'constraints' => ['id' => '[0-9]+'],
+                    'defaults' => ['controller' => MagicLinkController::class, 'action' => 'create'],
+                ],
+            ],
+            'magic_login_consume' => [
+                'type' => Segment::class,
+                'options' => [
+                    'route' => '/login/magic/:token',
+                    // 32 hex chars — pattern chặt tại route để không đi tới action nếu URL sai định dạng.
+                    'constraints' => ['token' => '[a-f0-9]{32}'],
+                    'defaults' => ['controller' => MagicLinkController::class, 'action' => 'consume'],
+                ],
+            ],
         ],
     ],
     'controllers' => [
@@ -162,6 +182,13 @@ return [
                     $c->get(UserAccountAdministrationService::class),
                     $c->get(UserIdentityService::class),
                 ),
+            MagicLinkController::class => static fn (ContainerInterface $c): MagicLinkController
+                => new MagicLinkController(
+                    $c->get(MagicLinkService::class),
+                    $c->get(UserService::class),
+                    $c->get(AuthService::class),
+                    $c->get(RememberMeService::class),
+                ),
         ],
     ],
     'service_manager' => [
@@ -172,6 +199,8 @@ return [
                 => new UserIdentityMapper($c->get(Adapter::class)),
             UserLinkTokenMapper::class => static fn (ContainerInterface $c): UserLinkTokenMapper
                 => new UserLinkTokenMapper($c->get(Adapter::class)),
+            UserLoginTokenMapper::class => static fn (ContainerInterface $c): UserLoginTokenMapper
+                => new UserLoginTokenMapper($c->get(Adapter::class)),
             UserRememberTokenMapper::class => static fn (ContainerInterface $c): UserRememberTokenMapper
                 => new UserRememberTokenMapper($c->get(Adapter::class)),
             OAuthLinkThrottleMapper::class => static fn (ContainerInterface $c): OAuthLinkThrottleMapper
@@ -203,11 +232,19 @@ return [
                     $c->get(UserMapper::class),
                     $c->get(Adapter::class),
                 ),
+            MagicLinkService::class => static fn (ContainerInterface $c): MagicLinkService
+                => new MagicLinkService(
+                    $c->get(UserLoginTokenMapper::class),
+                    $c->get(OAuthLinkThrottleMapper::class),
+                    $c->get(UserMapper::class),
+                    $c->get(Adapter::class),
+                ),
             UserService::class => static fn (ContainerInterface $c): UserService
                 => new UserService(
                     $c->get(UserMapper::class),
                     $c->get(UserIdentityService::class),
                     $c->get(RememberMeService::class),
+                    $c->get(UserLoginTokenMapper::class),
                     $c->get(Adapter::class),
                 ),
             OAuthProviderType::HTTP_CLIENT_SERVICE => static function (): Client {

@@ -1,0 +1,47 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var \User\Model\User\UserModel $user
+ * @var string $magicUrl
+ */
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow">Link đăng nhập</p>
+        <h1>Gửi link đăng nhập cho <?= $this->escapeHtml((string) $user->getFullName()) ?>.</h1>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn--outline" href="<?= $this->url('user_edit', ['id' => (int) $user->getId()]) ?>">Quay lại</a>
+    </div>
+</div>
+<section class="panel">
+    <div class="alert alert-warning">Link chỉ hiển thị ở trang này, dùng một lần và hết hạn sau 15 phút. Link cũ chưa dùng của cùng tài khoản đã bị thu hồi.</div>
+    <label class="form-label" for="magic-url-result">Link đăng nhập</label>
+    <div class="input-group">
+        <input class="form-control font-monospace" id="magic-url-result" readonly value="<?= $this->escapeHtmlAttr($magicUrl) ?>">
+        <button class="btn btn--outline" type="button" data-copy-target="magic-url-result">Sao chép</button>
+    </div>
+    <p class="field__help mt-2">Gửi link này cho <?= $this->escapeHtml((string) $user->getFullName()) ?> qua Zalo hoặc SMS. Người nhận bấm vào là vào thẳng, không cần gõ tên đăng nhập hay mật khẩu.</p>
+</section>
+<script>
+document.querySelectorAll('[data-copy-target]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        var input = document.getElementById(btn.getAttribute('data-copy-target'));
+        if (!input) { return; }
+        input.select();
+        input.setSelectionRange(0, input.value.length);
+        var done = function () {
+            var old = btn.textContent;
+            btn.textContent = 'Đã sao chép';
+            setTimeout(function () { btn.textContent = old; }, 1500);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(input.value).then(done, function () {
+                try { document.execCommand('copy'); done(); } catch (e) {}
+            });
+        } else {
+            try { document.execCommand('copy'); done(); } catch (e) {}
+        }
+    });
+});
+</script>

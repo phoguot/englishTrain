@@ -57,4 +57,14 @@ $action = $isEdit ? $this->url('user_edit', ['id' => $editId]) : $this->url('use
             </div>
         <?php endif; ?>
     </section>
+    <?php if (($values['role'] ?? '') !== 'admin'): ?>
+    <section class="panel mt-4">
+        <div class="panel__head"><h2>Link đăng nhập nhanh</h2></div>
+        <p class="muted">Tạo một link đăng nhập gửi qua Zalo/SMS cho học sinh hoặc giáo viên. Người nhận bấm vào là vào thẳng, không cần gõ mật khẩu. Link dùng một lần, hết hạn sau 15 phút.</p>
+        <form method="post" action="<?= $this->url('magic_link_create', ['id' => (int) $editId]) ?>">
+            <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+            <button class="btn btn--outline" type="submit">Tạo link đăng nhập</button>
+        </form>
+    </section>
+    <?php endif; ?>
 <?php endif; ?>

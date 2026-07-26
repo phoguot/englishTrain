@@ -14,6 +14,7 @@ use User\Filter\User\UserSaveFilter;
 use User\Model\User\UserDto;
 use User\Model\User\UserMapper;
 use User\Model\User\UserModel;
+use User\Model\UserLoginToken\UserLoginTokenMapper;
 
 /**
  * Cung cấp danh tính người dùng cho các module khác — luôn trả UserDto (không password_hash).
@@ -25,6 +26,7 @@ class UserService
         private readonly UserMapper $userMapper,
         private readonly UserIdentityService $identityService,
         private readonly RememberMeService $rememberMeService,
+        private readonly UserLoginTokenMapper $loginTokenMapper,
         private readonly Adapter $adapter,
     ) {
     }
@@ -125,6 +127,10 @@ class UserService
         try {
             $this->identityService->deleteAllForUser($id);
             $this->rememberMeService->purgeAllForUser($id);
+            // Magic-link đăng nhập: dọn cả token của user bị xóa lẫn token do user đó từng tạo,
+            // để không còn ID mồ côi giống pattern của identity/link-token.
+            $this->loginTokenMapper->deleteByUser($id);
+            $this->loginTokenMapper->deleteByCreator($id);
             if (!$this->userMapper->deleteUser($id)) {
                 throw new NotFoundException('Tài khoản không còn tồn tại.');
             }

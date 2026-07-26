@@ -67,6 +67,15 @@ class ClassroomService
         return $this->studentMapper->isStudentIn($studentId, $classroomId);
     }
 
+    /**
+     * Teacher này có đang dạy student này ở bất kỳ lớp nào không — dùng cho các thao tác
+     * áp lên tài khoản học sinh (magic-link đăng nhập, v.v.) chứ không riêng một lớp.
+     */
+    public function teachesStudent(int $teacherId, int $studentId): bool
+    {
+        return $this->studentMapper->teacherTeachesStudent($teacherId, $studentId);
+    }
+
     /** Application dùng để bảo vệ integrity trước khi hard-delete tài khoản. */
     public function hasCurrentUserReference(int $userId): bool
     {

@@ -60,6 +60,26 @@ class ClassroomStudentMapper
         return $ids;
     }
 
+    /** Học sinh có nằm trong bất kỳ lớp nào của teacher này không — 1 query có JOIN. */
+    public function teacherTeachesStudent(int $teacherId, int $studentId): bool
+    {
+        $sql    = $this->sql();
+        $select = $sql->select(['cs' => ClassroomStudentMapper::TABLE_NAME]);
+        $select->columns(['student_id']);
+        $select->join(
+            ['c' => 'classroom'],
+            'c.id = cs.classroom_id',
+            [],
+        );
+        $select->where([
+            'cs.student_id = ?' => $studentId,
+            'c.teacher_id = ?'  => $teacherId,
+        ]);
+        $select->limit(1);
+
+        return (bool) $sql->prepareStatementForSqlObject($select)->execute()->current();
+    }
+
     public function isStudentIn(int $studentId, int $classroomId): bool
     {
         $sql    = $this->sql();

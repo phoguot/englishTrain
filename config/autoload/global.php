@@ -7,8 +7,9 @@ return [
     ],
     "auth" => [
         // Cookie "ghi nhớ đăng nhập" sống bao lâu, tách khỏi session (session vẫn hết hạn theo
-        // session_config.gc_maxlifetime). Xem module/User/CLAUDE.md.
-        "remember_me_days" => 60,
+        // session_config.gc_maxlifetime). 180 ngày để học sinh/phụ huynh lớn tuổi trên máy cá nhân
+        // không phải đăng nhập lại nhiều lần — xem module/User/CLAUDE.md.
+        "remember_me_days" => 180,
     ],
     "session_config" => [
         "cookie_samesite" => "Lax",
