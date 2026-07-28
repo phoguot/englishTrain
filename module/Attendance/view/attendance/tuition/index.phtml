@@ -1,0 +1,154 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ * @var int $classroomId
+ * @var string $month định dạng Y-m
+ * @var array<int, array{id:int,name:string,teacherName:string,studentCount:int,feePerSession:float,status:string}> $classrooms
+ * @var array<string,mixed>|null $tuition kết quả TuitionService::monthlyTuition(), null = chưa chọn lớp
+ */
+$statusBadges = [
+    'present' => 'bg-success',
+    'late'    => 'bg-warning text-dark',
+    'absent'  => 'bg-danger',
+    'excused' => 'bg-info text-dark',
+];
+$exportQuery = ['classroom' => $classroomId, 'month' => $month];
+?>
+<div class="page-head">
+    <div class="page-head__copy">
+        <p class="eyebrow">Attendance / Học phí</p>
+        <h1>Học phí theo buổi.</h1>
+        <p>Học sinh đi học buổi nào thì buổi đó phát sinh tiền. Đi muộn vẫn tính tiền, vắng và có phép thì không.</p>
+    </div>
+    <?php if ($tuition !== null): ?>
+        <div class="page-actions">
+            <a class="btn" href="<?= $this->url('tuition_export', ['type' => 'summary'], ['query' => $exportQuery]) ?>">
+                Xuất Excel tổng hợp
+            </a>
+            <a class="btn btn--outline" href="<?= $this->url('tuition_export', ['type' => 'daily'], ['query' => $exportQuery]) ?>">
+                Xuất Excel theo ngày
+            </a>
+        </div>
+    <?php endif; ?>
+</div>
+
+<form method="get" action="<?= $this->url('tuition') ?>" class="panel form-grid">
+    <div class="field">
+        <label for="classroom">Lớp</label>
+        <select class="field__control" id="classroom" name="classroom" required>
+            <option value="">Chọn lớp</option>
+            <?php foreach ($classrooms as $classroom): ?>
+                <option value="<?= (int) $classroom['id'] ?>" <?= (int) $classroom['id'] === $classroomId ? 'selected' : '' ?>>
+                    <?= $this->escapeHtml($classroom['name']) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <span class="field__help">Chỉ hiển thị lớp bạn được xem.</span>
+    </div>
+
+    <div class="field">
+        <label for="month">Tháng</label>
+        <input class="field__control" type="month" id="month" name="month"
+               value="<?= $this->escapeHtmlAttr($month) ?>">
+        <span class="field__help">Bỏ trống = tháng hiện tại.</span>
+    </div>
+
+    <div class="field--wide"><button class="btn" type="submit">Xem học phí</button></div>
+</form>
+
+<?php if ($tuition === null): ?>
+    <section class="panel panel--tint mt-lg">
+        <div class="panel__head"><h2>Chọn lớp để xem học phí</h2></div>
+        <p class="muted">
+            <?= $classrooms === []
+                ? 'Bạn chưa được phân công lớp nào.'
+                : 'Chọn lớp và tháng ở trên, sau đó tải file Excel nếu cần.' ?>
+        </p>
+    </section>
+<?php elseif ($tuition['sessionCount'] === 0): ?>
+    <section class="panel panel--tint mt-lg">
+        <div class="panel__head"><h2><?= $this->escapeHtml($tuition['monthLabel']) ?></h2></div>
+        <p class="muted">Tháng này chưa có buổi học nào của lớp <?= $this->escapeHtml($tuition['classroom']->name) ?>.</p>
+    </section>
+<?php else: ?>
+    <section class="panel mt-lg">
+        <div class="panel__head">
+            <h2>Tổng hợp · <?= $this->escapeHtml($tuition['monthLabel']) ?></h2>
+            <span class="panel__meta">
+                <?= (int) $tuition['sessionCount'] ?> buổi ·
+                <strong><?= $this->escapeHtml($this->moneyVnd((float) $tuition['grandTotal'])) ?></strong>
+            </span>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Học sinh</th>
+                        <th scope="col">Buổi tính tiền</th>
+                        <th scope="col">Vắng</th>
+                        <th scope="col">Có phép</th>
+                        <th scope="col">Tổng tiền</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($tuition['summary'] as $row): ?>
+                        <tr>
+                            <td data-label="Học sinh"><strong><?= $this->escapeHtml($row['studentName']) ?></strong></td>
+                            <td data-label="Buổi tính tiền"><?= (int) $row['paidSessions'] ?></td>
+                            <td data-label="Vắng"><?= (int) $row['absentSessions'] ?></td>
+                            <td data-label="Có phép"><?= (int) $row['excusedSessions'] ?></td>
+                            <td data-label="Tổng tiền">
+                                <strong><?= $this->escapeHtml($this->moneyVnd((float) $row['totalAmount'])) ?></strong>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel mt-lg">
+        <div class="panel__head">
+            <h2>Chi tiết theo ngày</h2>
+            <span class="panel__meta"><?= count($tuition['daily']) ?> dòng điểm danh</span>
+        </div>
+        <?php if ($tuition['daily'] === []): ?>
+            <p class="muted">Các buổi trong tháng chưa được điểm danh nên chưa có tiền.</p>
+        <?php else: ?>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Ngày học</th>
+                            <th scope="col">Ca học</th>
+                            <th scope="col">Học sinh</th>
+                            <th scope="col">Trạng thái</th>
+                            <th scope="col">Đơn giá</th>
+                            <th scope="col">Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($tuition['daily'] as $row): ?>
+                            <tr>
+                                <td data-label="Ngày học"><?= $this->escapeHtml($row['date']) ?></td>
+                                <td data-label="Ca học" class="muted"><?= $this->escapeHtml((string) ($row['shiftLabel'] ?? '')) ?></td>
+                                <td data-label="Học sinh"><?= $this->escapeHtml($row['studentName']) ?></td>
+                                <td data-label="Trạng thái">
+                                    <span class="badge <?= $this->escapeHtmlAttr($statusBadges[$row['status']] ?? 'bg-secondary') ?>">
+                                        <?= $this->escapeHtml($row['statusLabel']) ?>
+                                    </span>
+                                </td>
+                                <td data-label="Đơn giá" class="muted">
+                                    <?= $this->escapeHtml($this->moneyVnd((float) $row['fee'], 'Chưa đặt')) ?>
+                                </td>
+                                <td data-label="Thành tiền">
+                                    <?= $this->escapeHtml($this->moneyVnd((float) $row['amount'])) ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </section>
+<?php endif; ?>

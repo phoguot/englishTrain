@@ -71,8 +71,61 @@ class AttendanceController extends BaseController
         $classroomId = (int) $this->params()->fromQuery('classroom', 0);
 
         return $this->formView(
-            ['classroom_id' => $classroomId, 'session_date' => date('Y-m-d'), 'note' => ''],
+            [
+                'classroom_id'    => $classroomId,
+                'session_date'    => date('Y-m-d'),
+                'shift_label'     => '',
+                'fee_per_session' => '',
+                'note'            => '',
+            ],
             [],
+        );
+    }
+
+    /** Sửa buổi học: ngày, ca học, đơn giá, ghi chú. Chỉ giáo viên phụ trách lớp. */
+    public function editAction(): mixed
+    {
+        $this->assertTeacher();
+
+        $sessionId = (int) $this->params()->fromRoute('sessionId', 0);
+        $userId    = (int) $this->currentUserId();
+        $role      = (string) $this->currentRole();
+
+        // Lấy buổi trước cả khi POST: ô chọn lớp bị disable nên POST không gửi classroom_id,
+        // mà form lỗi vẫn cần biết lớp để dựng link "Quay lại".
+        $session = $this->attendanceService->getSessionForEdit($sessionId, $userId, $role)['session'];
+
+        if ($this->getRequest()->isPost()) {
+            $post                 = $this->getAllPostParams();
+            $post['classroom_id'] = (int) $session->getClassroomId();
+
+            try {
+                $saved = $this->attendanceService->updateSession($sessionId, $post, $userId, $role);
+            } catch (ValidationException $e) {
+                return $this->formView($post, $e->getErrors(), $sessionId);
+            }
+
+            $this->flashMessenger()->addSuccessMessage(
+                'Đã cập nhật buổi học ngày ' . $saved->getSessionDateForHuman() . '.',
+            );
+
+            return $this->redirect()->toRoute(
+                'attendance',
+                [],
+                ['query' => ['classroom' => (int) $saved->getClassroomId()]],
+            );
+        }
+
+        return $this->formView(
+            [
+                'classroom_id'    => (int) $session->getClassroomId(),
+                'session_date'    => (string) $session->getSessionDate(),
+                'shift_label'     => $session->getShiftLabel() ?? '',
+                'fee_per_session' => (string) (int) $session->getFeePerSession(),
+                'note'            => $session->getNote() ?? '',
+            ],
+            [],
+            $sessionId,
         );
     }
 
@@ -126,11 +179,48 @@ class AttendanceController extends BaseController
             'labels'        => AttendanceRecordModel::LABELS,
             // admin chỉ xem, lớp lưu trữ chỉ đọc: ẩn nút Lưu cho đỡ rối. Chặn thật nằm ở Service.
             'canEdit'       => $role === 'teacher' && !$sheet['classroom']->isArchived(),
+            'paidCount'     => $sheet['paidCount'],
+            'totalAmount'   => $sheet['totalAmount'],
             'sheetValues' => $values,
             'errors' => $errors,
         ]);
 
         return $model;
+    }
+
+    /**
+     * Xóa buổi học (POST). Chỉ giáo viên phụ trách; Service chặn buổi đã điểm danh.
+     * Không có trang xác nhận riêng — nút trong danh sách đã hỏi lại bằng `confirm()`.
+     */
+    public function deleteAction(): mixed
+    {
+        $this->assertTeacher();
+
+        if (!$this->getRequest()->isPost()) {
+            return $this->redirect()->toRoute('attendance');
+        }
+
+        $sessionId = (int) $this->params()->fromRoute('sessionId', 0);
+        $userId    = (int) $this->currentUserId();
+        $role      = (string) $this->currentRole();
+
+        // Lấy trước để còn biết quay về lớp nào khi Service từ chối xóa.
+        $session = $this->attendanceService->getSessionForEdit($sessionId, $userId, $role)['session'];
+
+        try {
+            $this->attendanceService->deleteSession($sessionId, $userId, $role);
+            $this->flashMessenger()->addSuccessMessage(
+                'Đã xóa buổi học ngày ' . $session->getSessionDateForHuman() . '.',
+            );
+        } catch (ValidationException $e) {
+            $this->flashMessenger()->addErrorMessage($e->getErrors()['delete'] ?? 'Không xóa được buổi học.');
+        }
+
+        return $this->redirect()->toRoute(
+            'attendance',
+            [],
+            ['query' => ['classroom' => (int) $session->getClassroomId()]],
+        );
     }
 
     /** Lịch sử chuyên cần 1 học sinh. Service quyết định ai xem được của ai. */
@@ -201,16 +291,20 @@ class AttendanceController extends BaseController
     /**
      * @param array<string,mixed>  $postValues giá trị điền lại vào form
      * @param array<string,string> $errors
+     * @param int|null             $sessionId  khác null = đang SỬA buổi này, null = tạo mới
      */
-    private function formView(array $postValues, array $errors): ViewModel
+    private function formView(array $postValues, array $errors, ?int $sessionId = null): ViewModel
     {
         $stringValue = static fn (string $key, string $default = ''): string
             => is_scalar($postValues[$key] ?? null) ? (string) $postValues[$key] : $default;
         $model = $this->getViewModel();
         $model->setVariables([
+            'editId' => $sessionId,
             'values' => [
                 'classroom_id' => is_scalar($postValues['classroom_id'] ?? null) ? (int) $postValues['classroom_id'] : 0,
                 'session_date' => $stringValue('session_date', date('Y-m-d')),
+                'shift_label'  => $stringValue('shift_label'),
+                'fee_per_session' => $stringValue('fee_per_session'),
                 'note'         => $stringValue('note'),
             ],
             'errors'     => $errors,

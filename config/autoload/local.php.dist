@@ -23,7 +23,8 @@ return [
         "secret_key" => "",
         "bucket" => "english-train",
         // Giới hạn dung lượng mỗi video học sinh nộp (MB). Áp dụng ở JS, Filter và presigned URL.
-        "max_upload_mb" => 50,
+        // Video PUT thẳng lên R2, không đi qua PHP → không phụ thuộc upload_max_filesize của php.ini.
+        "max_upload_mb" => 100,
     ],
     "oauth" => [
         "google" => ["enabled" => false, "client_id" => "", "client_secret" => ""],

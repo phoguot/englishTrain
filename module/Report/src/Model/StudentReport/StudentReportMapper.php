@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Report\Model\StudentReport;
 
 use Laminas\Db\Adapter\Adapter;
+use Laminas\Db\Sql\Expression;
 use Laminas\Db\Sql\Sql;
 
 class StudentReportMapper
@@ -78,6 +79,19 @@ class StudentReportMapper
         $row = $sql->prepareStatementForSqlObject($select)->execute()->current();
 
         return $row ? (new StudentReportModel())->exchangeArray((array) $row) : null;
+    }
+
+    /** Số report của 1 lớp — Application hỏi trước khi cho xóa lớp (docs/04-contracts.md). */
+    public function countStudentReportByClassroom(int $classroomId): int
+    {
+        $sql    = $this->sql();
+        $select = $sql->select(StudentReportMapper::TABLE_NAME);
+        $select->columns(['cnt' => new Expression('COUNT(*)')]);
+        $select->where(['classroom_id = ?' => $classroomId]);
+
+        $row = $sql->prepareStatementForSqlObject($select)->execute()->current();
+
+        return (int) ($row['cnt'] ?? 0);
     }
 
     public function saveStudentReport(StudentReportModel $item): StudentReportModel

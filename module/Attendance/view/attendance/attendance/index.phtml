@@ -19,6 +19,9 @@
                 Tạo buổi học
             </a>
         <?php endif; ?>
+        <a class="btn btn--outline" href="<?= $this->url('tuition', [], ['query' => ['classroom' => $classroomId]]) ?>">
+            Học phí tháng
+        </a>
         <a class="btn btn--outline" href="<?= $this->url('classrooms') ?>">Quay lại lớp</a>
     </div>
 </div>
@@ -40,12 +43,15 @@
                 <thead>
                     <tr>
                         <th scope="col">Ngày học</th>
+                        <th scope="col">Ca học</th>
                         <th scope="col">Ghi chú</th>
                         <th scope="col">Có mặt</th>
                         <th scope="col">Đi muộn</th>
                         <th scope="col">Vắng</th>
                         <th scope="col">Có phép</th>
                         <th scope="col">Đã chọn</th>
+                        <th scope="col">Đơn giá</th>
+                        <th scope="col">Tiền buổi</th>
                         <th scope="col">Thao tác</th>
                     </tr>
                 </thead>
@@ -53,16 +59,38 @@
                     <?php foreach ($sessions as $session): ?>
                         <tr>
                             <td data-label="Ngày học"><strong><?= $this->escapeHtml($session['sessionDate']) ?></strong></td>
+                            <td data-label="Ca học" class="muted"><?= $this->escapeHtml((string) ($session['shiftLabel'] ?? '')) ?></td>
                             <td data-label="Ghi chú" class="muted"><?= $this->escapeHtml((string) ($session['note'] ?? '')) ?></td>
                             <td data-label="Có mặt"><span class="badge bg-success"><?= (int) $session['present'] ?></span></td>
                             <td data-label="Đi muộn"><span class="badge bg-warning text-dark"><?= (int) $session['late'] ?></span></td>
                             <td data-label="Vắng"><span class="badge bg-danger"><?= (int) $session['absent'] ?></span></td>
                             <td data-label="Có phép"><span class="badge bg-info text-dark"><?= (int) $session['excused'] ?></span></td>
                             <td data-label="Đã chọn"><?= (int) $session['markedCount'] ?>/<?= (int) $session['totalStudents'] ?></td>
+                            <td data-label="Đơn giá" class="muted">
+                                <?= $this->escapeHtml($this->moneyVnd((float) $session['fee'], 'Chưa đặt')) ?>
+                            </td>
+                            <td data-label="Tiền buổi">
+                                <strong><?= $this->escapeHtml($this->moneyVnd((float) $session['amount'], '0 đ')) ?></strong>
+                            </td>
                             <td data-label="Thao tác">
-                                <a class="btn btn--outline" href="<?= $this->url('attendance_mark', ['sessionId' => $session['id']]) ?>">
-                                    <?= $canEdit ? ((int) $session['markedCount'] === 0 ? 'Điểm danh' : 'Sửa điểm danh') : 'Xem' ?>
-                                </a>
+                                <div class="button-row">
+                                    <a class="btn btn--outline" href="<?= $this->url('attendance_mark', ['sessionId' => $session['id']]) ?>">
+                                        <?= $canEdit ? ((int) $session['markedCount'] === 0 ? 'Điểm danh' : 'Sửa điểm danh') : 'Xem' ?>
+                                    </a>
+                                    <?php if ($canEdit): ?>
+                                        <a class="btn btn--quiet" href="<?= $this->url('attendance_edit', ['sessionId' => $session['id']]) ?>">
+                                            Sửa buổi
+                                        </a>
+                                        <?php if ((int) $session['markedCount'] === 0): ?>
+                                            <form method="post"
+                                                  action="<?= $this->url('attendance_delete', ['sessionId' => $session['id']]) ?>"
+                                                  class="d-inline" data-confirm-delete-session>
+                                                <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+                                                <button type="submit" class="btn btn-outline-danger">Xóa buổi</button>
+                                            </form>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>

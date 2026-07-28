@@ -9,12 +9,16 @@ use Application\Controller\IndexController;
 use Application\Controller\LandingController;
 use Application\Controller\SystemLogController;
 use Application\Model\SystemLog\SystemLogMapper;
+use Application\Service\ClassroomDeletionService;
 use Application\Service\DashboardService;
 use Application\Service\SystemLogService;
 use Application\Service\UserAccountAdministrationService;
 use Application\View\Helper\CurrentUser;
+use Application\View\Helper\MoneyVnd;
 use Assignment\Service\AssignmentService;
+use Attendance\Service\AttendanceService;
 use Classroom\Service\ClassroomService;
+use Report\Service\ReportService;
 use Interop\Container\ContainerInterface;
 use Laminas\Db\Adapter\Adapter;
 use Laminas\Router\Http\Literal;
@@ -111,6 +115,15 @@ return [
                     $c->get(UserService::class),
                     $c->get(ClassroomService::class),
                 ),
+            // Xóa lớp phải hỏi 3 module nghiệp vụ nên điều phối ở đây, không ở Classroom
+            // (Classroom không được gọi ngược — xem docs/04-contracts.md).
+            ClassroomDeletionService::class => static fn (ContainerInterface $c): ClassroomDeletionService
+                => new ClassroomDeletionService(
+                    $c->get(ClassroomService::class),
+                    $c->get(AssignmentService::class),
+                    $c->get(AttendanceService::class),
+                    $c->get(ReportService::class),
+                ),
             SystemLogMapper::class => static fn (ContainerInterface $c): SystemLogMapper
                 => new SystemLogMapper($c->get(Adapter::class)),
             SystemLogService::class => static fn (ContainerInterface $c): SystemLogService
@@ -124,9 +137,11 @@ return [
         'factories' => [
             CurrentUser::class => static fn (ContainerInterface $c): CurrentUser
                 => new CurrentUser($c->get(AuthService::class), $c->get(UserService::class)),
+            MoneyVnd::class => static fn (): MoneyVnd => new MoneyVnd(),
         ],
         'aliases' => [
             'currentUser' => CurrentUser::class,
+            'moneyVnd'    => MoneyVnd::class,
         ],
     ],
     'view_manager' => [

@@ -128,6 +128,22 @@ class ClassroomStudentMapper
     }
 
     /**
+     * Gỡ toàn bộ học sinh khỏi 1 lớp. Chỉ dùng trong transaction xóa lớp
+     * (`ClassroomService::delete()`) — đây là quan hệ, không phải dữ liệu lịch sử.
+     */
+    public function deleteByClassroom(int $classroomId): void
+    {
+        if ($classroomId <= 0) {
+            return;
+        }
+
+        $sql    = $this->sql();
+        $delete = $sql->delete(ClassroomStudentMapper::TABLE_NAME);
+        $delete->where(['classroom_id = ?' => $classroomId]);
+        $sql->prepareStatementForSqlObject($delete)->execute();
+    }
+
+    /**
      * Đồng bộ danh sách học sinh của 1 lớp về đúng $studentIds, trong 1 transaction.
      * Chỉ xóa/thêm phần chênh lệch — học sinh giữ nguyên KHÔNG bị reset joined_at.
      * Gỡ học sinh = xóa row ở đây; KHÔNG đụng submission/attendance/report của em đó.

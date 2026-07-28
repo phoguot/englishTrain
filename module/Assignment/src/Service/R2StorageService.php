@@ -36,7 +36,9 @@ class R2StorageService
         $accessKey  = (string) ($config['access_key'] ?? '');
         $secretKey  = (string) ($config['secret_key'] ?? '');
         $this->bucket         = (string) ($config['bucket'] ?? '');
-        $this->maxUploadBytes = (int) ($config['max_upload_mb'] ?? 50) * 1024 * 1024;
+        // Mặc định 100MB — khớp với giá trị chốt trong local.php.dist, để môi trường quên khai
+        // key này không bị hạn khác âm thầm. Đây là NƠI DUY NHẤT đọc hạn dung lượng.
+        $this->maxUploadBytes = (int) ($config['max_upload_mb'] ?? 100) * 1024 * 1024;
 
         // Thiếu bất kỳ credential nào → presigned URL sẽ trỏ vào endpoint rỗng và upload chắc chắn
         // hỏng. Đánh dấu để Service báo lỗi rõ ràng thay vì để browser gặp lỗi mạng khó hiểu.

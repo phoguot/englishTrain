@@ -15,6 +15,8 @@ final readonly class ClassroomDto
         public string $name,
         public int $teacherId,
         public string $status,
+        /** Học phí mặc định 1 buổi/1 học sinh (VNĐ) — Attendance dùng làm giá gợi ý khi tạo buổi. */
+        public float $feePerSession = 0.0,
     ) {
     }
 

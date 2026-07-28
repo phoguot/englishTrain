@@ -28,6 +28,18 @@ class ReportService
     ) {
     }
 
+    /**
+     * Lớp này đã có report nào chưa — Application hỏi trước khi cho xóa lớp,
+     * để không xóa mất report đã viết cho học sinh (docs/04-contracts.md).
+     *
+     * Đây là ngoại lệ duy nhất của luật "không ai gọi ngược vào Report": chỉ ĐẾM,
+     * không trả nội dung report ra ngoài.
+     */
+    public function countByClassroom(int $classroomId): int
+    {
+        return $this->reportMapper->countStudentReportByClassroom($classroomId);
+    }
+
     /** @return array{classroom:ClassroomDto,students:array,reports:array} */
     public function listForTeacher(int $classroomId, int $teacherId): array
     {

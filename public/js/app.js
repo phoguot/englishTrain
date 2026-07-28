@@ -53,6 +53,22 @@
     });
   });
 
+  document.querySelectorAll('form[data-confirm-delete-session]').forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      if (!window.confirm('Xóa buổi học này? Chỉ xóa được buổi chưa điểm danh, thao tác không thể hoàn tác.')) {
+        event.preventDefault();
+      }
+    });
+  });
+
+  document.querySelectorAll('form[data-confirm-delete-classroom]').forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      if (!window.confirm('Xóa lớp này? Chỉ xóa được lớp chưa có bài tập, buổi học hay report. Thao tác không thể hoàn tác.')) {
+        event.preventDefault();
+      }
+    });
+  });
+
   document.querySelectorAll('form[data-confirm-unlink]').forEach(function (form) {
     form.addEventListener('submit', function (event) {
       if (!window.confirm('Ngắt liên kết đăng nhập này?')) {

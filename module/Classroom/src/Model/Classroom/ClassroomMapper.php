@@ -92,6 +92,22 @@ class ClassroomMapper
         return $out;
     }
 
+    /**
+     * Xóa cứng lớp. **Chỉ gọi từ `ClassroomService::delete()`**, sau khi Application đã xác nhận
+     * lớp không còn bài tập / buổi học / report (xem module/Classroom/CLAUDE.md).
+     */
+    public function deleteClassroom(int $id): void
+    {
+        if ($id <= 0) {
+            return;
+        }
+
+        $sql    = $this->sql();
+        $delete = $sql->delete(ClassroomMapper::TABLE_NAME);
+        $delete->where(['id = ?' => $id]);
+        $sql->prepareStatementForSqlObject($delete)->execute();
+    }
+
     public function saveClassroom(ClassroomModel $item): ClassroomModel
     {
         $sql  = $this->sql();
@@ -99,6 +115,7 @@ class ClassroomMapper
             'name'          => $item->getName(),
             'teacher_id'    => $item->getTeacherId(),
             'schedule_note' => $item->getScheduleNote(),
+            'fee_per_session' => $item->getFeePerSession(),
             'status'        => $item->getStatus(),
         ];
 

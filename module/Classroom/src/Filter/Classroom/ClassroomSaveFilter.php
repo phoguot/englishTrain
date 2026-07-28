@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Classroom\Filter\Classroom;
 
 use Classroom\Model\Classroom\ClassroomModel;
+use Laminas\Filter\PregReplace;
 use Laminas\Filter\StringTrim;
 use Laminas\Filter\StripTags;
 use Laminas\Filter\ToInt;
 use Laminas\InputFilter\InputFilter;
+use Laminas\Validator\Digits;
 use Laminas\Validator\InArray;
+use Laminas\Validator\LessThan;
 use Laminas\Validator\NotEmpty;
 use Laminas\Validator\StringLength;
 use User\Service\UserService;
@@ -73,6 +76,29 @@ class ClassroomSaveFilter extends InputFilter
             ],
             'validators' => [
                 ['name' => StringLength::class, 'options' => ['max' => 255, 'messages' => [StringLength::TOO_LONG => 'Ghi chú lịch học tối đa 255 ký tự.']]],
+            ],
+        ]);
+
+        // Đơn giá 1 buổi: nhận cả kiểu người Việt hay gõ ("150.000", "150 000") bằng cách bỏ
+        // dấu phân cách TRƯỚC khi validate, rồi mới bắt buộc là chữ số. Chỉ nhận số nguyên VNĐ.
+        // Bộ input y hệt ở Attendance\Filter\AttendanceSession\SessionSaveFilter — sửa thì sửa cả 2.
+        $this->add([
+            'name'       => 'fee_per_session',
+            'required'   => true,
+            'filters'    => [
+                ['name' => StringTrim::class],
+                ['name' => PregReplace::class, 'options' => ['pattern' => '/[.,\s]/', 'replacement' => '']],
+            ],
+            'validators' => [
+                ['name' => NotEmpty::class, 'options' => ['messages' => [NotEmpty::IS_EMPTY => 'Vui lòng nhập đơn giá 1 buổi (nhập 0 nếu lớp chưa thu tiền).']]],
+                ['name' => Digits::class, 'options' => ['messages' => [Digits::NOT_DIGITS => 'Đơn giá 1 buổi chỉ được chứa chữ số.']]],
+                [
+                    'name'    => LessThan::class,
+                    'options' => [
+                        'max'      => 100000000,
+                        'messages' => [LessThan::NOT_LESS => 'Đơn giá 1 buổi phải nhỏ hơn 100.000.000 VNĐ.'],
+                    ],
+                ],
             ],
         ]);
 

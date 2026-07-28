@@ -2,7 +2,7 @@
 /**
  * @var Laminas\View\Renderer\PhpRenderer $this
  * @var string $role
- * @var array<int, array{id:int,name:string,teacherName:string,studentCount:int,status:string}> $classrooms
+ * @var array<int, array{id:int,name:string,teacherName:string,studentCount:int,feePerSession:float,status:string}> $classrooms
  */
 $isAdmin = $role === 'admin';
 ?>
@@ -37,6 +37,7 @@ $isAdmin = $role === 'admin';
                         <th scope="col">Tên lớp</th>
                         <th scope="col">Giáo viên</th>
                         <th scope="col">Sĩ số</th>
+                        <th scope="col">Đơn giá/buổi</th>
                         <th scope="col">Trạng thái</th>
                         <th scope="col">Thao tác</th>
                     </tr>
@@ -48,6 +49,9 @@ $isAdmin = $role === 'admin';
                             <td data-label="Tên lớp"><strong><?= $this->escapeHtml($classroom['name']) ?></strong></td>
                             <td data-label="Giáo viên"><?= $this->escapeHtml($classroom['teacherName']) ?></td>
                             <td data-label="Sĩ số"><?= (int) $classroom['studentCount'] ?> học sinh</td>
+                            <td data-label="Đơn giá/buổi">
+                                <?= $this->escapeHtml($this->moneyVnd((float) $classroom['feePerSession'], 'Chưa đặt')) ?>
+                            </td>
                             <td data-label="Trạng thái">
                                 <span class="badge <?= $archived ? 'bg-secondary' : 'bg-success' ?>">
                                     <?= $archived ? 'Đã lưu trữ' : 'Đang hoạt động' ?>
@@ -64,6 +68,10 @@ $isAdmin = $role === 'admin';
                                     <a class="btn btn--quiet"
                                        href="<?= $this->url('attendance', [], ['query' => ['classroom' => $classroom['id']]]) ?>">
                                         Điểm danh
+                                    </a>
+                                    <a class="btn btn--quiet"
+                                       href="<?= $this->url('tuition', [], ['query' => ['classroom' => $classroom['id']]]) ?>">
+                                        Học phí
                                     </a>
                                     <?php if (!$isAdmin): ?>
                                         <a class="btn btn--quiet"
@@ -83,6 +91,13 @@ $isAdmin = $role === 'admin';
                                             Sửa lớp
                                         </a>
                                     <?php endif; ?>
+                                    <?php // admin xóa mọi lớp, teacher xóa lớp mình (danh sách đã lọc theo quyền). ?>
+                                    <form method="post"
+                                          action="<?= $this->url('classrooms', ['action' => 'delete', 'id' => $classroom['id']]) ?>"
+                                          class="d-inline" data-confirm-delete-classroom>
+                                        <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+                                        <button type="submit" class="btn btn-outline-danger">Xóa lớp</button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>

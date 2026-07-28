@@ -1,16 +1,25 @@
 <?php
 /**
  * @var Laminas\View\Renderer\PhpRenderer $this
- * @var array{classroom_id:int, session_date:string, note:string} $values
+ * @var int|null $editId khác null = đang sửa buổi học đó
+ * @var array{classroom_id:int, session_date:string, shift_label:string, fee_per_session:string, note:string} $values
  * @var array<string,string> $errors
- * @var array<int, array{id:int,name:string,teacherName:string,studentCount:int,status:string}> $classrooms
+ * @var array<int, array{id:int,name:string,teacherName:string,studentCount:int,feePerSession:float,status:string}> $classrooms
  */
+$isEdit = $editId !== null;
+$action = $isEdit
+    ? $this->url('attendance_edit', ['sessionId' => $editId])
+    : $this->url('attendance_create');
 ?>
 <div class="page-head">
     <div class="page-head__copy">
         <p class="eyebrow">Attendance</p>
-        <h1>Tạo buổi học.</h1>
-        <p>Chọn lớp và ngày học. Sau khi tạo, bạn sẽ được đưa thẳng đến bảng điểm danh.</p>
+        <h1><?= $isEdit ? 'Sửa buổi học.' : 'Tạo buổi học.' ?></h1>
+        <p>
+            <?= $isEdit
+                ? 'Sửa ngày, ca học hoặc đơn giá của buổi này. Đổi đơn giá sẽ tính lại tiền của buổi.'
+                : 'Chọn lớp và ngày học. Sau khi tạo, bạn sẽ được đưa thẳng đến bảng điểm danh.' ?>
+        </p>
     </div>
     <div class="page-actions">
         <a class="btn btn--outline"
@@ -18,11 +27,12 @@
     </div>
 </div>
 
-<form method="post" action="<?= $this->url('attendance_create') ?>" class="panel form-grid">
+<form method="post" action="<?= $this->escapeHtmlAttr($action) ?>" class="panel form-grid">
     <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
     <div class="field">
         <label for="classroom_id">Lớp</label>
         <select class="field__control" id="classroom_id" name="classroom_id" required
+                <?= $isEdit ? 'disabled' : '' ?>
                 <?= isset($errors['classroom_id']) ? 'aria-invalid="true" aria-describedby="attendance-classroom-error"' : '' ?>>
             <option value="">Chọn lớp</option>
             <?php foreach ($classrooms as $classroom): ?>
@@ -33,7 +43,9 @@
             <?php endforeach; ?>
         </select>
         <span class="field__help<?= isset($errors['classroom_id']) ? ' field__help--error' : '' ?>" id="attendance-classroom-error">
-            <?= isset($errors['classroom_id']) ? $this->escapeHtml($errors['classroom_id']) : 'Chỉ hiển thị lớp bạn phụ trách.' ?>
+            <?= isset($errors['classroom_id'])
+                ? $this->escapeHtml($errors['classroom_id'])
+                : ($isEdit ? 'Không chuyển buổi học sang lớp khác được.' : 'Chỉ hiển thị lớp bạn phụ trách.') ?>
         </span>
     </div>
 
@@ -47,6 +59,29 @@
         </span>
     </div>
 
+    <div class="field">
+        <label for="shift_label">Ca học</label>
+        <input class="field__control" type="text" id="shift_label" name="shift_label" maxlength="50"
+               value="<?= $this->escapeHtmlAttr($values['shift_label']) ?>" placeholder="Ca sáng 8h-10h"
+               <?= isset($errors['shift_label']) ? 'aria-invalid="true" aria-describedby="shift-label-error"' : '' ?>>
+        <span class="field__help<?= isset($errors['shift_label']) ? ' field__help--error' : '' ?>" id="shift-label-error">
+            <?= isset($errors['shift_label']) ? $this->escapeHtml($errors['shift_label']) : 'Không bắt buộc. Ghi để phân biệt ca khi xuất Excel.' ?>
+        </span>
+    </div>
+
+    <div class="field">
+        <label for="fee_per_session">Đơn giá buổi này (VNĐ)</label>
+        <input class="field__control" type="text" inputmode="numeric" id="fee_per_session"
+               name="fee_per_session" maxlength="12"
+               value="<?= $this->escapeHtmlAttr($values['fee_per_session']) ?>" placeholder="150000"
+               <?= isset($errors['fee_per_session']) ? 'aria-invalid="true" aria-describedby="session-fee-error"' : '' ?>>
+        <span class="field__help<?= isset($errors['fee_per_session']) ? ' field__help--error' : '' ?>" id="session-fee-error">
+            <?= isset($errors['fee_per_session'])
+                ? $this->escapeHtml($errors['fee_per_session'])
+                : 'Để trống = dùng đơn giá mặc định của lớp. Tiền tính cho mỗi học sinh có đi học.' ?>
+        </span>
+    </div>
+
     <div class="field field--wide">
         <label for="note">Ghi chú buổi học</label>
         <input class="field__control" type="text" id="note" name="note" maxlength="255"
@@ -57,5 +92,9 @@
         </span>
     </div>
 
-    <div class="field--wide"><button class="btn" type="submit">Tạo buổi học</button></div>
+    <div class="field--wide button-row">
+        <button class="btn" type="submit"><?= $isEdit ? 'Lưu thay đổi' : 'Tạo buổi học' ?></button>
+        <a class="btn btn--quiet"
+           href="<?= $this->url('attendance', [], ['query' => ['classroom' => $values['classroom_id']]]) ?>">Hủy</a>
+    </div>
 </form>

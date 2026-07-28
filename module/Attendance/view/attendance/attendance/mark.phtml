@@ -4,10 +4,12 @@
  * @var \Attendance\Model\AttendanceSession\AttendanceSessionModel $session
  * @var int $classroomId
  * @var string $classroomName
- * @var array<int, array{studentId:int, name:string, status:?string, note:?string, isMember:bool}> $rows
+ * @var array<int, array{studentId:int, name:string, status:?string, note:?string, isMember:bool, amount:?float}> $rows
  * @var string[] $statuses
  * @var array<string,string> $labels
  * @var bool $canEdit
+ * @var int $paidCount
+ * @var float $totalAmount
  * @var array<string,mixed> $sheetValues
  * @var array<string,string> $errors
  */
@@ -16,7 +18,12 @@ $postedNotes = is_array($sheetValues['note'] ?? null) ? $sheetValues['note'] : [
 ?>
 <div class="page-head">
     <div class="page-head__copy">
-        <p class="eyebrow"><?= $this->escapeHtml($classroomName) ?> / <?= $this->escapeHtml($session->getSessionDateForHuman()) ?></p>
+        <p class="eyebrow">
+            <?= $this->escapeHtml($classroomName) ?> / <?= $this->escapeHtml($session->getSessionDateForHuman()) ?>
+            <?php if (($session->getShiftLabel() ?? '') !== ''): ?>
+                / <?= $this->escapeHtml((string) $session->getShiftLabel()) ?>
+            <?php endif; ?>
+        </p>
         <h1>Điểm danh buổi học.</h1>
         <p>
             <?= ($session->getNote() ?? '') !== ''
@@ -46,8 +53,17 @@ $postedNotes = is_array($sheetValues['note'] ?? null) ? $sheetValues['note'] : [
         <section class="panel">
             <div class="panel__head">
                 <h2><?= count($rows) ?> học sinh</h2>
-                <span class="panel__meta"><?= count(array_filter($rows, static fn (array $row): bool => $row['status'] !== null)) ?> đã chọn</span>
+                <span class="panel__meta">
+                    <?= count(array_filter($rows, static fn (array $row): bool => $row['status'] !== null)) ?> đã chọn
+                    · đơn giá <?= $this->escapeHtml($this->moneyVnd($session->getFeePerSession(), 'chưa đặt')) ?>
+                </span>
             </div>
+
+            <p class="muted">
+                Đã lưu: <?= (int) $paidCount ?> học sinh có đi học ·
+                <strong><?= $this->escapeHtml($this->moneyVnd($totalAmount)) ?></strong> tiền buổi này.
+                Số này tính theo trạng thái đã lưu — chọn xong phải bấm Lưu điểm danh.
+            </p>
 
             <?php foreach ($rows as $row): ?>
                 <div class="attendance-row">
@@ -55,6 +71,11 @@ $postedNotes = is_array($sheetValues['note'] ?? null) ? $sheetValues['note'] : [
                         <strong><?= $this->escapeHtml($row['name']) ?></strong>
                         <span>
                             <?= $row['isMember'] ? 'Học sinh trong lớp' : 'Đã rời lớp · vẫn giữ lịch sử buổi này' ?>
+                            <?php if ($row['amount'] !== null): ?>
+                                · <?= $this->escapeHtml($this->moneyVnd((float) $row['amount'])) ?>
+                            <?php else: ?>
+                                · chưa điểm danh
+                            <?php endif; ?>
                         </span>
                     </div>
                     <div class="status-choices" role="group" aria-label="Trạng thái của <?= $this->escapeHtmlAttr($row['name']) ?>">

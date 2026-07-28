@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace Attendance\Filter\AttendanceSession;
 
 use Classroom\Service\ClassroomService;
+use Laminas\Filter\PregReplace;
 use Laminas\Filter\StringTrim;
 use Laminas\Filter\StripTags;
 use Laminas\Filter\ToInt;
 use Laminas\InputFilter\InputFilter;
 use Laminas\Validator\Date;
+use Laminas\Validator\Digits;
 use Laminas\Validator\InArray;
+use Laminas\Validator\LessThan;
 use Laminas\Validator\NotEmpty;
 use Laminas\Validator\StringLength;
 
@@ -63,6 +66,42 @@ class SessionSaveFilter extends InputFilter
                             Date::INVALID_DATE => 'Ngày học không hợp lệ.',
                             Date::FALSEFORMAT  => 'Ngày học phải theo định dạng ngày/tháng/năm.',
                         ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->add([
+            'name'       => 'shift_label',
+            'required'   => false,
+            'filters'    => [
+                ['name' => StringTrim::class],
+                ['name' => StripTags::class],
+            ],
+            'validators' => [
+                [
+                    'name'    => StringLength::class,
+                    'options' => ['max' => 50, 'messages' => [StringLength::TOO_LONG => 'Nhãn ca học tối đa 50 ký tự.']],
+                ],
+            ],
+        ]);
+
+        // Đơn giá buổi này. Để TRỐNG là hợp lệ → Service lấy đơn giá mặc định của lớp.
+        // Bộ filter/validator y hệt Classroom\Filter\Classroom\ClassroomSaveFilter — sửa thì sửa cả 2.
+        $this->add([
+            'name'       => 'fee_per_session',
+            'required'   => false,
+            'filters'    => [
+                ['name' => StringTrim::class],
+                ['name' => PregReplace::class, 'options' => ['pattern' => '/[.,\s]/', 'replacement' => '']],
+            ],
+            'validators' => [
+                ['name' => Digits::class, 'options' => ['messages' => [Digits::NOT_DIGITS => 'Đơn giá buổi học chỉ được chứa chữ số.']]],
+                [
+                    'name'    => LessThan::class,
+                    'options' => [
+                        'max'      => 100000000,
+                        'messages' => [LessThan::NOT_LESS => 'Đơn giá buổi học phải nhỏ hơn 100.000.000 VNĐ.'],
                     ],
                 ],
             ],

@@ -16,6 +16,19 @@ class AttendanceSessionStudentMapper
     {
     }
 
+    /** Gỡ roster khi xóa buổi học. Chỉ gọi trong transaction xóa buổi (AttendanceService). */
+    public function deleteRoster(int $sessionId): void
+    {
+        if ($sessionId <= 0) {
+            return;
+        }
+
+        $sql    = new Sql($this->adapter);
+        $delete = $sql->delete(AttendanceSessionStudentMapper::TABLE_NAME);
+        $delete->where(['session_id = ?' => $sessionId]);
+        $sql->prepareStatementForSqlObject($delete)->execute();
+    }
+
     /** @param int[] $studentIds */
     public function saveRoster(int $sessionId, array $studentIds): void
     {

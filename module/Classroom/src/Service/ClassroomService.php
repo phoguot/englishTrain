@@ -13,6 +13,7 @@ use Classroom\Model\Classroom\ClassroomMapper;
 use Classroom\Model\Classroom\ClassroomModel;
 use Classroom\Model\Classroom\ClassroomDto;
 use Classroom\Model\ClassroomStudent\ClassroomStudentMapper;
+use Laminas\Db\Adapter\Adapter;
 use User\Service\UserService;
 
 /**
@@ -29,6 +30,7 @@ class ClassroomService
         private readonly ClassroomMapper $classroomMapper,
         private readonly ClassroomStudentMapper $studentMapper,
         private readonly UserService $userService,
+        private readonly Adapter $adapter,
     ) {
     }
 
@@ -88,7 +90,7 @@ class ClassroomService
      * admin thấy tất cả, teacher chỉ lớp mình (lọc trong SQL).
      * Gom tên giáo viên + sĩ số bằng query gộp, tránh N+1.
      *
-     * @return array<int, array{id:int,name:string,teacherName:string,studentCount:int,status:string}>
+     * @return array<int, array{id:int,name:string,teacherName:string,studentCount:int,feePerSession:float,status:string}>
      */
     public function listRowsForActor(int $userId, string $role): array
     {
@@ -115,6 +117,7 @@ class ClassroomService
                 'name'         => (string) $c->getName(),
                 'teacherName'  => $teachers[$tid]->fullName ?? '(không rõ)',
                 'studentCount' => $counts[$id] ?? 0,
+                'feePerSession' => $c->getFeePerSession(),
                 'status'       => $c->getStatus(),
             ];
         }
@@ -203,11 +206,40 @@ class ClassroomService
     }
 
     /**
+     * Xóa cứng lớp + gỡ danh sách học sinh, trong 1 transaction.
+     *
+     * **KHÔNG gọi trực tiếp từ controller.** Lớp còn bài tập / buổi học / report thì không được
+     * xóa, mà module này KHÔNG được phép hỏi 3 module đó (chiều phụ thuộc: họ dùng Classroom,
+     * không ngược lại — `docs/04-contracts.md`). Việc kiểm đó do
+     * `Application\Service\ClassroomDeletionService` điều phối, giống cách hard-delete tài khoản.
+     *
+     * Quyền: admin xóa được mọi lớp; teacher chỉ lớp mình phụ trách (`getEditable()`).
+     * Học sinh trong lớp **không** chặn xóa — đó là quan hệ, không phải dữ liệu lịch sử.
+     */
+    public function delete(int $id, int $userId, string $role): ClassroomModel
+    {
+        $classroom = $this->getEditable($id, $userId, $role);
+
+        $connection = $this->adapter->getDriver()->getConnection();
+        $connection->beginTransaction();
+        try {
+            $this->studentMapper->deleteByClassroom($id);
+            $this->classroomMapper->deleteClassroom($id);
+            $connection->commit();
+
+            return $classroom;
+        } catch (\Throwable $e) {
+            $connection->rollback();
+            throw $e;
+        }
+    }
+
+    /**
      * Chạy Filter class. Đây là NƠI DUY NHẤT kiểm giá trị đầu vào của lớp học —
      * không rải if/else kiểm value ở Service hay Controller.
      *
      * @param array<string,mixed> $data
-     * @return array{name:string,teacher_id:int,schedule_note:?string,status:string}
+     * @return array{name:string,teacher_id:int,schedule_note:?string,fee_per_session:string,status:string}
      * @throws ValidationException
      */
     private function validate(array $data): array
@@ -288,12 +320,13 @@ class ClassroomService
         }
     }
 
-    /** @param array{name:string,teacher_id:int,schedule_note:?string,status:string} $v */
+    /** @param array{name:string,teacher_id:int,schedule_note:?string,fee_per_session:string,status:string} $v */
     private function fill(ClassroomModel $model, array $v): void
     {
         $model->setName($v['name']);
         $model->setTeacherId((int) $v['teacher_id']);
         $model->setScheduleNote(($v['schedule_note'] ?? '') !== '' ? $v['schedule_note'] : null);
+        $model->setFeePerSession((float) $v['fee_per_session']);
         $model->setStatus($v['status']);
     }
 }

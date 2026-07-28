@@ -17,6 +17,8 @@ class ClassroomModel
     private ?string $name = null;
     private ?int $teacherId = null;
     private ?string $scheduleNote = null;
+    /** Học phí 1 buổi/1 học sinh (VNĐ). Chỉ là giá MẶC ĐỊNH khi tạo buổi — không hồi tố buổi cũ. */
+    private float $feePerSession = 0.0;
     private string $status = self::STATUS_ACTIVE;
 
     public function getId(): ?int
@@ -59,6 +61,16 @@ class ClassroomModel
         $this->scheduleNote = $scheduleNote;
     }
 
+    public function getFeePerSession(): float
+    {
+        return $this->feePerSession;
+    }
+
+    public function setFeePerSession(float $feePerSession): void
+    {
+        $this->feePerSession = $feePerSession;
+    }
+
     public function getStatus(): string
     {
         return $this->status;
@@ -80,6 +92,7 @@ class ClassroomModel
         $this->name         = $row['name'] ?? null;
         $this->teacherId    = isset($row['teacher_id']) ? (int) $row['teacher_id'] : null;
         $this->scheduleNote = $row['schedule_note'] ?? null;
+        $this->feePerSession = isset($row['fee_per_session']) ? (float) $row['fee_per_session'] : 0.0;
         $this->status       = $row['status'] ?? self::STATUS_ACTIVE;
 
         return $this;
@@ -92,6 +105,7 @@ class ClassroomModel
             (string) $this->name,
             (int) $this->teacherId,
             $this->status,
+            $this->feePerSession,
         );
     }
 }

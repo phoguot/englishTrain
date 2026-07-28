@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Assignment\Model\Assignment;
 
 use Laminas\Db\Adapter\Adapter;
+use Laminas\Db\Sql\Expression;
 use Laminas\Db\Sql\Sql;
 
 /**
@@ -126,6 +127,19 @@ class AssignmentMapper
         $sql->prepareStatementForSqlObject($update)->execute();
 
         return $item;
+    }
+
+    /** Số bài tập của 1 lớp — Application hỏi trước khi cho xóa lớp (docs/04-contracts.md). */
+    public function countAssignmentByClassroom(int $classroomId): int
+    {
+        $sql    = $this->sql();
+        $select = $sql->select(AssignmentMapper::TABLE_NAME);
+        $select->columns(['cnt' => new Expression('COUNT(*)')]);
+        $select->where(['classroom_id = ?' => $classroomId]);
+
+        $row = $sql->prepareStatementForSqlObject($select)->execute()->current();
+
+        return (int) ($row['cnt'] ?? 0);
     }
 
     public function deleteAssignment(int $id): void

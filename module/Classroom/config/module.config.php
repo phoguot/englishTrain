@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Classroom;
 
+use Application\Service\ClassroomDeletionService;
 use Classroom\Controller\ClassroomController;
 use Classroom\Model\Classroom\ClassroomMapper;
 use Classroom\Model\ClassroomStudent\ClassroomStudentMapper;
@@ -48,7 +49,11 @@ return [
     'controllers' => [
         'factories' => [
             ClassroomController::class => static fn (ContainerInterface $c): ClassroomController
-                => new ClassroomController($c->get(ClassroomService::class), $c->get(UserService::class)),
+                => new ClassroomController(
+                    $c->get(ClassroomService::class),
+                    $c->get(UserService::class),
+                    $c->get(ClassroomDeletionService::class),
+                ),
         ],
     ],
     'service_manager' => [
@@ -62,6 +67,7 @@ return [
                     $c->get(ClassroomMapper::class),
                     $c->get(ClassroomStudentMapper::class),
                     $c->get(UserService::class),
+                    $c->get(Adapter::class),
                 ),
         ],
     ],

@@ -32,6 +32,15 @@ class AssignmentService
     // ── Hợp đồng dashboard cho module Application ──────────────────────────
 
     /**
+     * Lớp này đã có bài tập nào chưa — Application hỏi trước khi cho xóa lớp,
+     * để không xóa mất bài tập và bài nộp của học sinh (docs/04-contracts.md).
+     */
+    public function countByClassroom(int $classroomId): int
+    {
+        return $this->assignmentMapper->countAssignmentByClassroom($classroomId);
+    }
+
+    /**
      * @return array<int,array{id:int,title:string,classroomId:int,classroomName:string,submittedCount:int,deadlineAt:?string,lastSubmittedAt:?string}>
      */
     public function dashboardForTeacher(int $teacherId): array

@@ -39,6 +39,7 @@ class AttendanceService
         private readonly ClassroomService $classroomService,
         private readonly UserService $userService,
         private readonly AttendanceSheetBuilder $sheetBuilder,
+        private readonly ClassroomAccessGuard $accessGuard,
         private readonly Adapter $adapter,
     ) {
     }
@@ -67,11 +68,22 @@ class AttendanceService
         return AttendanceSummary::fromCounts($counts);
     }
 
+    /**
+     * Lớp này đã có buổi học nào chưa — Application hỏi trước khi cho xóa lớp,
+     * để không xóa mất lịch sử điểm danh/học phí (docs/04-contracts.md).
+     */
+    public function countSessionsInClassroom(int $classroomId): int
+    {
+        return $this->sessionMapper->countAttendanceSessionByClassroom($classroomId);
+    }
+
     // ── Dùng nội bộ cho controller của module Attendance ────────────────────
 
     /**
      * Danh sách buổi học của 1 lớp kèm số liệu từng trạng thái.
      * admin xem mọi lớp; teacher chỉ lớp mình phụ trách.
+     *
+     * Mỗi dòng kèm `fee` (đơn giá buổi) và `amount` (tiền buổi = đơn giá × số em đi học).
      *
      * @return array{classroom: \Classroom\Model\Classroom\ClassroomDto, rows: array<int, array<string,mixed>>}
      */
@@ -93,9 +105,15 @@ class AttendanceService
             $id = (int) $session->getId();
             $c  = $counts[$id] ?? [];
 
+            $paidCount = 0;
+            foreach (AttendanceRecordModel::PAID_STATUSES as $paidStatus) {
+                $paidCount += $c[$paidStatus] ?? 0;
+            }
+
             $rows[] = [
                 'id'            => $id,
                 'sessionDate'   => $session->getSessionDateForHuman(),
+                'shiftLabel'    => $session->getShiftLabel(),
                 'note'          => $session->getNote(),
                 'present'       => $c[AttendanceRecordModel::STATUS_PRESENT] ?? 0,
                 'late'          => $c[AttendanceRecordModel::STATUS_LATE] ?? 0,
@@ -103,6 +121,9 @@ class AttendanceService
                 'excused'       => $c[AttendanceRecordModel::STATUS_EXCUSED] ?? 0,
                 'markedCount'   => array_sum($c),
                 'totalStudents' => max($rosterCounts[$id] ?? 0, array_sum($c)),
+                'fee'           => $session->getFeePerSession(),
+                // Tiền của buổi = đơn giá × số em có đi học. Tính ở đây, view chỉ in.
+                'amount'        => $session->getFeePerSession() * $paidCount,
             ];
         }
 
@@ -111,6 +132,9 @@ class AttendanceService
 
     /**
      * Tạo buổi học. Nhận dữ liệu POST THÔ — validate bằng SessionSaveFilter ngay tại đây.
+     *
+     * Đơn giá để trống → lấy `classroom.fee_per_session` làm mặc định và **snapshot** vào buổi.
+     * Từ đó về sau lớp có đổi giá cũng không ảnh hưởng buổi này (module/Attendance/CLAUDE.md).
      *
      * @param array<string,mixed> $data dữ liệu POST thô
      * @throws ValidationException dữ liệu sai HOẶC lớp đã có buổi trong ngày đó
@@ -121,7 +145,7 @@ class AttendanceService
         $classroomId = (int) $values['classroom_id'];
 
         // InArray trong Filter mới chỉ chống tamper dropdown — quyền sở hữu vẫn kiểm ở đây.
-        $this->assertCanEditClassroom($classroomId, $userId, $role);
+        $classroom = $this->assertCanEditClassroom($classroomId, $userId, $role);
 
         // Kiểm trùng TRƯỚC khi insert: để MySQL ném lỗi UNIQUE ra thì user thấy trang trắng.
         $existing = $this->sessionMapper->getAttendanceSessionByDate($classroomId, $values['session_date']);
@@ -135,6 +159,12 @@ class AttendanceService
         $session = new AttendanceSessionModel();
         $session->setClassroomId($classroomId);
         $session->setSessionDate($values['session_date']);
+        $session->setShiftLabel(($values['shift_label'] ?? '') !== '' ? $values['shift_label'] : null);
+        $session->setFeePerSession(
+            ($values['fee_per_session'] ?? '') !== ''
+                ? (float) $values['fee_per_session']
+                : $classroom->feePerSession,
+        );
         $session->setNote(($values['note'] ?? '') !== '' ? $values['note'] : null);
         $session->setCreatedBy($userId);
 
@@ -156,16 +186,111 @@ class AttendanceService
     }
 
     /**
+     * Lấy buổi học để sửa (ngày / ca / đơn giá / ghi chú). Chỉ giáo viên phụ trách, lớp chưa lưu trữ.
+     *
+     * @return array{session: AttendanceSessionModel, classroom: \Classroom\Model\Classroom\ClassroomDto}
+     */
+    public function getSessionForEdit(int $sessionId, int $userId, string $role): array
+    {
+        $session   = $this->getSessionOrFail($sessionId);
+        $classroom = $this->assertCanEditClassroom((int) $session->getClassroomId(), $userId, $role);
+
+        return ['session' => $session, 'classroom' => $classroom];
+    }
+
+    /**
+     * Sửa buổi học. Sửa đơn giá ở đây **có** làm thay đổi tiền của buổi đó — đó là mục đích
+     * (gõ sai thì sửa lại). Đổi đơn giá của lớp thì không hồi tố.
+     *
+     * `classroom_id` trong POST bị **bỏ qua**: buổi học không được chuyển sang lớp khác,
+     * nên lấy thẳng từ buổi đang sửa thay vì tin dữ liệu gửi lên.
+     *
+     * @param array<string,mixed> $data dữ liệu POST thô
+     * @throws ValidationException dữ liệu sai HOẶC lớp đã có buổi khác trong ngày đó
+     */
+    public function updateSession(int $sessionId, array $data, int $userId, string $role): AttendanceSessionModel
+    {
+        $edit        = $this->getSessionForEdit($sessionId, $userId, $role);
+        $session     = $edit['session'];
+        $classroomId = (int) $session->getClassroomId();
+
+        $data['classroom_id'] = $classroomId;
+        $values               = $this->validateSession($data, $userId, $role);
+
+        $clash = $this->sessionMapper->getAttendanceSessionByDate($classroomId, $values['session_date']);
+        if ($clash !== null && (int) $clash->getId() !== $sessionId) {
+            throw new ValidationException(
+                ['session_date' => 'Lớp này đã có buổi học ngày ' . $clash->getSessionDateForHuman() . '.'],
+                ['existingSessionId' => (int) $clash->getId()],
+            );
+        }
+
+        $session->setSessionDate($values['session_date']);
+        $session->setShiftLabel(($values['shift_label'] ?? '') !== '' ? $values['shift_label'] : null);
+        $session->setFeePerSession(
+            ($values['fee_per_session'] ?? '') !== ''
+                ? (float) $values['fee_per_session']
+                : $edit['classroom']->feePerSession,
+        );
+        $session->setNote(($values['note'] ?? '') !== '' ? $values['note'] : null);
+
+        return $this->sessionMapper->saveAttendanceSession($session);
+    }
+
+    /**
+     * Xóa buổi học — chỉ giáo viên phụ trách lớp, và **chỉ buổi CHƯA điểm danh**.
+     *
+     * Buổi đã có record là dữ liệu lịch sử đã phát sinh học phí: xóa đi là số tiền của tháng
+     * hụt mà không ai biết. Muốn xóa thật thì phải xóa điểm danh trước (chọn lại trạng thái
+     * không phải là xóa — hiện chưa có luồng xóa record, và cố ý chưa có).
+     *
+     * @throws ValidationException buổi đã điểm danh
+     */
+    public function deleteSession(int $sessionId, int $userId, string $role): AttendanceSessionModel
+    {
+        $session = $this->getSessionOrFail($sessionId);
+        $this->assertCanEditClassroom((int) $session->getClassroomId(), $userId, $role);
+
+        $markedCount = array_sum($this->recordMapper->countBySessionIds([$sessionId])[$sessionId] ?? []);
+        if ($markedCount > 0) {
+            throw new ValidationException([
+                'delete' => 'Buổi ' . $session->getSessionDateForHuman() . ' đã điểm danh '
+                    . $markedCount . ' học sinh nên không xóa được. Buổi đã có học phí phát sinh.',
+            ]);
+        }
+
+        // Roster và buổi cùng biến mất hoặc cùng ở lại — buổi không roster là dữ liệu dở dang.
+        $connection = $this->adapter->getDriver()->getConnection();
+        $connection->beginTransaction();
+        try {
+            $this->rosterMapper->deleteRoster($sessionId);
+            $this->sessionMapper->deleteAttendanceSession($sessionId);
+            $connection->commit();
+
+            return $session;
+        } catch (\Throwable $e) {
+            $connection->rollback();
+            throw $e;
+        }
+    }
+
+    /**
      * Dữ liệu màn hình điểm danh: buổi học + bảng học sinh kèm trạng thái đã lưu (nếu có).
      *
      * Danh sách học sinh = roster được chụp khi tạo buổi ∪ những em đã có record.
      * Phép hợp là cố ý: em bị gỡ khỏi lớp vẫn phải hiện trong lịch sử buổi cũ, nên KHÔNG
      * lọc theo `classroom_student` kiểu INNER (module/Attendance/CLAUDE.md).
      *
+     * Mỗi dòng kèm `amount` = tiền em đó phải trả cho buổi này theo trạng thái ĐÃ LƯU
+     * (đơn giá buổi nếu có đi học, 0 nếu vắng/có phép, null nếu chưa điểm danh).
+     * Tính ở đây để view chỉ việc in — và để JS không phải tính tiền.
+     *
      * @return array{
      *     session: AttendanceSessionModel,
      *     classroom: \Classroom\Model\Classroom\ClassroomDto,
-     *     rows: array<int, array{studentId:int, name:string, status:?string, note:?string, isMember:bool}>
+     *     rows: array<int, array{studentId:int, name:string, status:?string, note:?string, isMember:bool, amount:?float}>,
+     *     paidCount: int,
+     *     totalAmount: float
      * }
      */
     public function getSheet(int $sessionId, int $userId, string $role): array
@@ -181,10 +306,23 @@ class AttendanceService
 
         $names = $this->userService->findMany($studentIds);
 
+        $fee         = $session->getFeePerSession();
+        $paidCount   = 0;
+        $totalAmount = 0.0;
+
         $rows = [];
         foreach ($studentIds as $studentId) {
             $studentId = (int) $studentId;
             $record    = $records[$studentId] ?? null;
+
+            $amount = null;
+            if ($record !== null) {
+                $amount = $record->isPaid() ? $fee : 0.0;
+                if ($record->isPaid()) {
+                    $paidCount++;
+                    $totalAmount += $fee;
+                }
+            }
 
             $rows[] = [
                 'studentId' => $studentId,
@@ -192,12 +330,19 @@ class AttendanceService
                 'status'    => $record?->getStatus(),
                 'note'      => $record?->getNote(),
                 'isMember'  => isset($memberSet[$studentId]),
+                'amount'    => $amount,
             ];
         }
 
         usort($rows, static fn (array $a, array $b): int => strcoll($a['name'], $b['name']));
 
-        return ['session' => $session, 'classroom' => $classroom, 'rows' => $rows];
+        return [
+            'session'     => $session,
+            'classroom'   => $classroom,
+            'rows'        => $rows,
+            'paidCount'   => $paidCount,
+            'totalAmount' => $totalAmount,
+        ];
     }
 
     /**
@@ -386,7 +531,7 @@ class AttendanceService
      * Chạy Filter class. Đây là NƠI DUY NHẤT kiểm giá trị đầu vào của buổi học.
      *
      * @param array<string,mixed> $data
-     * @return array{classroom_id:int, session_date:string, note:?string}
+     * @return array{classroom_id:int, session_date:string, shift_label:?string, fee_per_session:?string, note:?string}
      * @throws ValidationException
      */
     private function validateSession(array $data, int $userId, string $role): array
@@ -411,44 +556,14 @@ class AttendanceService
         return $session;
     }
 
-    /**
-     * Quyền XEM điểm danh của 1 lớp: admin xem được mọi lớp, teacher chỉ lớp mình phụ trách.
-     * Dùng cho các đường đọc (danh sách buổi, mở bảng điểm danh, lịch sử học sinh).
-     */
+    /** Luật quyền theo lớp nằm ở ClassroomAccessGuard — dùng chung với TuitionService. */
     private function assertCanViewClassroom(int $classroomId, int $userId, string $role): \Classroom\Model\Classroom\ClassroomDto
     {
-        $classroom = $this->classroomService->find($classroomId);
-        if ($classroom === null) {
-            throw new NotFoundException('Lớp không tồn tại.');
-        }
-        if ($role === self::ROLE_ADMIN) {
-            return $classroom;
-        }
-        if (!$this->classroomService->isTeacherOf($userId, $classroomId)) {
-            throw new AccessDeniedException('Bạn không phụ trách lớp này.');
-        }
-
-        return $classroom;
+        return $this->accessGuard->assertCanView($classroomId, $userId, $role);
     }
 
-    /**
-     * Quyền GHI điểm danh: **chỉ** giáo viên phụ trách lớp. Admin xem được nhưng KHÔNG điểm danh —
-     * điểm danh là việc của giáo viên đứng lớp, admin ghi hộ thì không ai chịu trách nhiệm số liệu.
-     */
     private function assertCanEditClassroom(int $classroomId, int $userId, string $role): \Classroom\Model\Classroom\ClassroomDto
     {
-        $classroom = $this->classroomService->find($classroomId);
-        if ($classroom === null) {
-            throw new NotFoundException('Lớp không tồn tại.');
-        }
-        if ($role !== self::ROLE_TEACHER || !$this->classroomService->isTeacherOf($userId, $classroomId)) {
-            throw new AccessDeniedException('Chỉ giáo viên phụ trách lớp mới điểm danh được.');
-        }
-        // Lớp lưu trữ là chỉ đọc (module/Classroom/CLAUDE.md) — kiểm ở Service, không chỉ ẩn nút.
-        if ($classroom->isArchived()) {
-            throw new AccessDeniedException('Lớp đã lưu trữ, không thể điểm danh.');
-        }
-
-        return $classroom;
+        return $this->accessGuard->assertCanEdit($classroomId, $userId, $role);
     }
 }

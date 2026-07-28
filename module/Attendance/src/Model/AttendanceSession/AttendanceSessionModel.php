@@ -14,6 +14,10 @@ class AttendanceSessionModel
     private ?int $id = null;
     private ?int $classroomId = null;
     private ?string $sessionDate = null;
+    /** Nhãn ca học ("Ca sáng 8h-10h") — chỉ ghi chú, KHÔNG phải khóa: 1 lớp 1 ngày vẫn 1 buổi. */
+    private ?string $shiftLabel = null;
+    /** Đơn giá 1 học sinh của buổi này (VNĐ), snapshot từ classroom lúc tạo. */
+    private float $feePerSession = 0.0;
     private ?string $note = null;
     private ?int $createdBy = null;
 
@@ -46,6 +50,26 @@ class AttendanceSessionModel
     public function setSessionDate(?string $sessionDate): void
     {
         $this->sessionDate = $sessionDate;
+    }
+
+    public function getShiftLabel(): ?string
+    {
+        return $this->shiftLabel;
+    }
+
+    public function setShiftLabel(?string $shiftLabel): void
+    {
+        $this->shiftLabel = $shiftLabel;
+    }
+
+    public function getFeePerSession(): float
+    {
+        return $this->feePerSession;
+    }
+
+    public function setFeePerSession(float $feePerSession): void
+    {
+        $this->feePerSession = $feePerSession;
     }
 
     public function getNote(): ?string
@@ -88,6 +112,8 @@ class AttendanceSessionModel
         $this->classroomId = isset($row['classroom_id']) ? (int) $row['classroom_id'] : null;
         // MySQL trả DATE dạng 'Y-m-d' — cắt phòng khi driver trả kèm giờ.
         $this->sessionDate = isset($row['session_date']) ? substr((string) $row['session_date'], 0, 10) : null;
+        $this->shiftLabel  = $row['shift_label'] ?? null;
+        $this->feePerSession = isset($row['fee_per_session']) ? (float) $row['fee_per_session'] : 0.0;
         $this->note        = $row['note'] ?? null;
         $this->createdBy   = isset($row['created_by']) ? (int) $row['created_by'] : null;
 

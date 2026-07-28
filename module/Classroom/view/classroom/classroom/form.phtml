@@ -3,7 +3,7 @@
  * @var Laminas\View\Renderer\PhpRenderer $this
  * @var bool $isEdit
  * @var int|null $editId
- * @var array{name:string,teacher_id:int,schedule_note:string,status:string} $values
+ * @var array{name:string,teacher_id:int,schedule_note:string,fee_per_session:string,status:string} $values
  * @var array<string,string> $errors
  * @var \User\Model\User\UserDto[] $teachers
  */
@@ -57,6 +57,20 @@ $action = $isEdit
         </select>
         <span class="field__help<?= isset($errors['status']) ? ' field__help--error' : '' ?>" id="status-error">
             <?= isset($errors['status']) ? $this->escapeHtml($errors['status']) : 'Lớp lưu trữ chỉ còn đọc.' ?>
+        </span>
+    </div>
+
+    <div class="field">
+        <label for="fee_per_session">Đơn giá 1 buổi (VNĐ)</label>
+        <input class="field__control" type="text" inputmode="numeric" id="fee_per_session"
+               name="fee_per_session" maxlength="12"
+               value="<?= $this->escapeHtmlAttr($values['fee_per_session']) ?>" required
+               placeholder="150000"
+               <?= isset($errors['fee_per_session']) ? 'aria-invalid="true" aria-describedby="fee-error"' : '' ?>>
+        <span class="field__help<?= isset($errors['fee_per_session']) ? ' field__help--error' : '' ?>" id="fee-error">
+            <?= isset($errors['fee_per_session'])
+                ? $this->escapeHtml($errors['fee_per_session'])
+                : 'Học phí 1 buổi của 1 học sinh. Đây là giá mặc định cho buổi tạo mới — buổi đã tạo giữ giá cũ.' ?>
         </span>
     </div>
 

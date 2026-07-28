@@ -27,6 +27,18 @@ class AttendanceRecordModel
         self::STATUS_EXCUSED,
     ];
 
+    /**
+     * @var string[] Trạng thái **có phát sinh học phí**.
+     *
+     * `late` vẫn là có đi học nên vẫn thu tiền — giống hệt cách `AttendanceSummary` tính chuyên cần.
+     * `excused` (có phép) KHÔNG thu tiền. Đây là NƠI DUY NHẤT khai quy tắc này: đừng viết lại
+     * `in_array('present', ...)` ở Service hay view. Xem module/Attendance/CLAUDE.md.
+     */
+    public const PAID_STATUSES = [
+        self::STATUS_PRESENT,
+        self::STATUS_LATE,
+    ];
+
     /** @var array<string,string> Nhãn tiếng Việt dùng chung mọi màn hình. */
     public const LABELS = [
         self::STATUS_PRESENT => 'Có mặt',
@@ -95,6 +107,12 @@ class AttendanceRecordModel
     public function getStatusLabel(): string
     {
         return self::LABELS[$this->status] ?? '';
+    }
+
+    /** Buổi này của em này có tính tiền không. Dùng chung cho mọi chỗ tính học phí. */
+    public function isPaid(): bool
+    {
+        return in_array($this->status, self::PAID_STATUSES, true);
     }
 
     /** @param array<string,mixed> $row */

@@ -48,6 +48,34 @@ class AttendanceRecordMapper
     }
 
     /**
+     * Record của NHIỀU buổi trong 1 query — dùng cho bảng học phí cả tháng, tránh N+1.
+     *
+     * @param int[] $sessionIds
+     * @return array<int, array<int, AttendanceRecordModel>> map session_id => [student_id => record]
+     */
+    public function getRecordsBySessionIds(array $sessionIds): array
+    {
+        $sessionIds = array_values(array_filter(array_map('intval', $sessionIds), static fn (int $i): bool => $i > 0));
+        if ($sessionIds === []) {
+            return [];
+        }
+
+        $sql    = $this->sql();
+        $select = $sql->select(AttendanceRecordMapper::TABLE_NAME);
+        $select->where->in('session_id', $sessionIds);
+
+        $result = $sql->prepareStatementForSqlObject($select)->execute();
+
+        $out = [];
+        foreach ($result as $row) {
+            $model = (new AttendanceRecordModel())->exchangeArray((array) $row);
+            $out[(int) $model->getSessionId()][(int) $model->getStudentId()] = $model;
+        }
+
+        return $out;
+    }
+
+    /**
      * Toàn bộ record của 1 học sinh (mọi lớp, mọi buổi). Service lọc theo lớp/kỳ bằng
      * danh sách session lấy kèm — 2 query, không N+1, và mỗi mapper vẫn chỉ đụng bảng của mình.
      *

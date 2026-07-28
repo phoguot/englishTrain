@@ -6,13 +6,15 @@
     "require": {
         "php": ">=8.2",
         "ext-dom": "*",
+        "ext-zip": "*",
         "laminas/laminas-mvc": "^3.7",
         "laminas/laminas-db": "^2.20",
         "laminas/laminas-inputfilter": "^2.31",
         "laminas/laminas-session": "^2.21",
         "laminas/laminas-mvc-plugin-flashmessenger": "^1.10",
         "laminas/laminas-http": "^2.23",
-        "aws/aws-sdk-php": "^3.300"
+        "aws/aws-sdk-php": "^3.300",
+        "phpoffice/phpspreadsheet": "^5.9"
     },
     "autoload": {
         "psr-4": {

@@ -7,6 +7,7 @@ namespace Classroom\Controller;
 use Application\Controller\BaseController;
 use Application\Exception\AccessDeniedException;
 use Application\Exception\ValidationException;
+use Application\Service\ClassroomDeletionService;
 use Classroom\Model\Classroom\ClassroomModel;
 use Classroom\Service\ClassroomService;
 use Laminas\View\Model\ViewModel;
@@ -25,6 +26,7 @@ class ClassroomController extends BaseController
     public function __construct(
         private readonly ClassroomService $classroomService,
         private readonly UserService $userService,
+        private readonly ClassroomDeletionService $deletionService,
     ) {
     }
 
@@ -65,6 +67,33 @@ class ClassroomController extends BaseController
         }
 
         return $this->formView($classroom, [], []);
+    }
+
+    /**
+     * Xóa lớp (POST). admin xóa được mọi lớp, teacher chỉ lớp mình phụ trách.
+     * Lớp còn bài tập / buổi học / report thì `ClassroomDeletionService` từ chối —
+     * lúc đó flash lỗi và về danh sách, không xóa nửa vời.
+     */
+    public function deleteAction(): mixed
+    {
+        if (!$this->getRequest()->isPost()) {
+            return $this->redirect()->toRoute('classrooms');
+        }
+
+        $id = (int) $this->params()->fromRoute('id', 0);
+
+        try {
+            $classroom = $this->deletionService->delete(
+                $id,
+                (int) $this->currentUserId(),
+                (string) $this->currentRole(),
+            );
+            $this->flashMessenger()->addSuccessMessage('Đã xóa lớp "' . $classroom->getName() . '".');
+        } catch (ValidationException $e) {
+            $this->flashMessenger()->addErrorMessage($e->getErrors()['delete'] ?? 'Không xóa được lớp này.');
+        }
+
+        return $this->redirect()->toRoute('classrooms');
     }
 
     public function studentsAction(): mixed
@@ -172,6 +201,7 @@ class ClassroomController extends BaseController
                 'name'          => $stringValue('name'),
                 'teacher_id'    => is_scalar($postValues['teacher_id'] ?? null) ? (int) $postValues['teacher_id'] : 0,
                 'schedule_note' => $stringValue('schedule_note'),
+                'fee_per_session' => $stringValue('fee_per_session'),
                 'status'        => $stringValue('status', ClassroomModel::STATUS_ACTIVE),
             ];
         } elseif ($existing !== null) {
@@ -179,10 +209,17 @@ class ClassroomController extends BaseController
                 'name'          => $existing->getName(),
                 'teacher_id'    => (int) $existing->getTeacherId(),
                 'schedule_note' => $existing->getScheduleNote() ?? '',
+                'fee_per_session' => (string) (int) $existing->getFeePerSession(),
                 'status'        => $existing->getStatus(),
             ];
         } else {
-            $values = ['name' => '', 'teacher_id' => 0, 'schedule_note' => '', 'status' => ClassroomModel::STATUS_ACTIVE];
+            $values = [
+                'name'            => '',
+                'teacher_id'      => 0,
+                'schedule_note'   => '',
+                'fee_per_session' => '0',
+                'status'          => ClassroomModel::STATUS_ACTIVE,
+            ];
         }
 
         $model = $this->getViewModel();
