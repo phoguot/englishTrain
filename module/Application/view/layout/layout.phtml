@@ -136,8 +136,14 @@ $spaceLabels = [
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
             <div class="modal-body">
-                <video id="videoModalPlayer" class="w-100 d-block" style="max-height:70vh" controls playsinline></video>
-                <p class="text-muted small mt-2 mb-0" data-video-modal-status></p>
+                <video id="videoModalPlayer" class="w-100 d-block" style="max-height:70vh" controls playsinline preload="metadata"></video>
+                <p class="text-muted small mt-2 mb-1" data-video-modal-status></p>
+                <!-- Fallback cho mobile: nhiều máy không giải mã được định dạng học sinh quay (vd .mov/HEVC,
+                     .mkv) ngay trong thẻ <video>, nhưng trình phát gốc của thiết bị thì mở được. Luôn cho
+                     mở thẳng đường dẫn để giáo viên vẫn xem/tải được khi player nhúng báo lỗi. -->
+                <a class="btn btn--outline" data-video-modal-open href="#" target="_blank" rel="noopener" hidden>
+                    Mở bằng trình phát của thiết bị
+                </a>
             </div>
         </div>
     </div>

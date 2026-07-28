@@ -118,6 +118,7 @@
   const videoModalEl = document.getElementById('videoModal');
   const videoModalPlayer = document.getElementById('videoModalPlayer');
   const videoModalStatus = videoModalEl ? videoModalEl.querySelector('[data-video-modal-status]') : null;
+  const videoModalOpen = videoModalEl ? videoModalEl.querySelector('[data-video-modal-open]') : null;
   const videoModal = (videoModalEl && window.bootstrap && window.bootstrap.Modal)
     ? window.bootstrap.Modal.getOrCreateInstance(videoModalEl)
     : null;
@@ -129,6 +130,21 @@
       videoModalPlayer.removeAttribute('src');
       videoModalPlayer.load();
       if (videoModalStatus) videoModalStatus.textContent = '';
+      if (videoModalOpen) {
+        videoModalOpen.hidden = true;
+        videoModalOpen.removeAttribute('href');
+      }
+    });
+
+    // Player nhúng không giải mã được (thường gặp trên mobile với .mov/HEVC, .mkv, .webm tùy thiết bị).
+    // Đừng để im lặng — hướng người dùng sang trình phát gốc của thiết bị qua link fallback.
+    videoModalPlayer.addEventListener('error', function () {
+      // Bỏ qua "lỗi" phát sinh khi đóng popup (đã gỡ src): chỉ báo khi thực sự có video đang mở.
+      if (!videoModalPlayer.getAttribute('src')) return;
+      if (videoModalStatus) {
+        videoModalStatus.textContent =
+          'Trình duyệt không phát được định dạng video này. Hãy mở bằng trình phát của thiết bị bên dưới.';
+      }
     });
   }
 
@@ -155,7 +171,15 @@
         })
         .then(function (data) {
           if (status) status.textContent = '';
+          if (videoModalStatus) videoModalStatus.textContent = '';
+          // Luôn chuẩn bị link mở bằng trình phát gốc — trên mobile đây là cách xem đáng tin cậy nhất.
+          if (videoModalOpen) {
+            videoModalOpen.href = data.url;
+            videoModalOpen.hidden = false;
+          }
           videoModalPlayer.src = data.url;
+          // Gọi load() để iOS Safari chắc chắn nhận src mới (nhất là sau khi src cũ đã bị gỡ khi đóng popup).
+          videoModalPlayer.load();
           videoModal.show();
         })
         .catch(function (error) {
