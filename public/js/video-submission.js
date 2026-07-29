@@ -75,81 +75,6 @@
       });
   }
 
-  function inlineVideoViewer(panel) {
-    panel.classList.add('video-view-panel');
-
-    let viewer = panel.querySelector('[data-video-inline]');
-    if (viewer) {
-      return {
-        viewer: viewer,
-        player: viewer.querySelector('[data-video-inline-player]'),
-        status: viewer.querySelector('[data-video-inline-status]'),
-        openLink: viewer.querySelector('[data-video-inline-open]'),
-      };
-    }
-
-    viewer = document.createElement('div');
-    viewer.className = 'video-inline mt-2';
-    viewer.setAttribute('data-video-inline', '');
-    viewer.hidden = true;
-
-    const player = document.createElement('video');
-    player.className = 'video-inline__player w-100 d-block';
-    player.setAttribute('data-video-inline-player', '');
-    player.setAttribute('controls', '');
-    player.setAttribute('playsinline', '');
-    player.setAttribute('preload', 'metadata');
-
-    const inlineStatus = document.createElement('p');
-    inlineStatus.className = 'field__help mt-2 mb-2';
-    inlineStatus.setAttribute('data-video-inline-status', '');
-
-    const openLink = document.createElement('a');
-    openLink.className = 'btn btn--outline';
-    openLink.setAttribute('data-video-inline-open', '');
-    openLink.setAttribute('target', '_blank');
-    openLink.setAttribute('rel', 'noopener');
-    openLink.textContent = 'Mở video trong tab mới';
-
-    player.addEventListener('loadedmetadata', function () {
-      inlineStatus.textContent = '';
-      inlineStatus.classList.remove('field__help--error');
-    });
-
-    player.addEventListener('error', function () {
-      if (!player.getAttribute('src')) return;
-      inlineStatus.textContent = 'Trình duyệt không phát được định dạng này tại đây. Hãy mở video trong tab mới.';
-      inlineStatus.classList.add('field__help--error');
-    });
-
-    viewer.appendChild(player);
-    viewer.appendChild(inlineStatus);
-    viewer.appendChild(openLink);
-
-    const status = panel.querySelector('[data-video-view-status]');
-    if (status) {
-      status.insertAdjacentElement('afterend', viewer);
-    } else {
-      panel.appendChild(viewer);
-    }
-
-    return { viewer: viewer, player: player, status: inlineStatus, openLink: openLink };
-  }
-
-  function showInlineVideo(panel, url) {
-    const inline = inlineVideoViewer(panel);
-    if (!inline.player || !inline.openLink) return;
-
-    inline.openLink.href = url;
-    inline.player.src = url;
-    inline.player.load();
-    if (inline.status) {
-      inline.status.textContent = 'Nếu popup không hiện, xem video ngay tại đây hoặc mở trong tab mới.';
-      inline.status.classList.remove('field__help--error');
-    }
-    inline.viewer.hidden = false;
-  }
-
   // ── Nộp video (student) ────────────────────────────────────────────────
   document.querySelectorAll('[data-video-upload]').forEach(function (panel) {
     const input = panel.querySelector('[data-video-input]');
@@ -230,18 +155,99 @@
   const videoModal = (videoModalEl && window.bootstrap && window.bootstrap.Modal)
     ? window.bootstrap.Modal.getOrCreateInstance(videoModalEl)
     : null;
+  let manualBackdrop = null;
+  let manualModalOpen = false;
+
+  function resetVideoModal() {
+    if (videoModalPlayer) {
+      videoModalPlayer.pause();
+      videoModalPlayer.removeAttribute('src');
+      videoModalPlayer.load();
+    }
+    if (videoModalStatus) videoModalStatus.textContent = '';
+    if (videoModalOpen) {
+      videoModalOpen.hidden = true;
+      videoModalOpen.removeAttribute('href');
+    }
+  }
+
+  function hideManualVideoModal() {
+    if (!videoModalEl || !manualModalOpen) return;
+
+    resetVideoModal();
+    videoModalEl.classList.remove('show');
+    videoModalEl.style.display = 'none';
+    videoModalEl.setAttribute('aria-hidden', 'true');
+    videoModalEl.removeAttribute('aria-modal');
+    videoModalEl.removeAttribute('role');
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+
+    if (manualBackdrop) {
+      manualBackdrop.remove();
+      manualBackdrop = null;
+    }
+    manualModalOpen = false;
+  }
+
+  function showManualVideoModal() {
+    if (!videoModalEl) return false;
+
+    manualModalOpen = true;
+    videoModalEl.style.display = 'block';
+    videoModalEl.removeAttribute('aria-hidden');
+    videoModalEl.setAttribute('aria-modal', 'true');
+    videoModalEl.setAttribute('role', 'dialog');
+    videoModalEl.classList.add('show');
+    document.body.classList.add('modal-open');
+    document.body.style.overflow = 'hidden';
+
+    if (!manualBackdrop) {
+      manualBackdrop = document.createElement('div');
+      manualBackdrop.className = 'modal-backdrop fade show';
+      manualBackdrop.addEventListener('click', hideManualVideoModal);
+      document.body.appendChild(manualBackdrop);
+    }
+
+    const closeButton = videoModalEl.querySelector('[data-bs-dismiss="modal"]');
+    if (closeButton instanceof HTMLElement) closeButton.focus();
+
+    return true;
+  }
+
+  function showVideoModal() {
+    if (!videoModalEl || !videoModalPlayer) return false;
+
+    if (videoModal) {
+      try {
+        videoModal.show();
+        window.setTimeout(function () {
+          const isVisible = videoModalEl.classList.contains('show')
+            || videoModalEl.style.display === 'block';
+          if (!isVisible) showManualVideoModal();
+        }, 350);
+        return true;
+      } catch (error) {
+        return showManualVideoModal();
+      }
+    }
+
+    return showManualVideoModal();
+  }
 
   if (videoModalEl && videoModalPlayer) {
     // Đóng popup: dừng phát + gỡ src để không tải ngầm và không phát tiếng nền.
     videoModalEl.addEventListener('hidden.bs.modal', function () {
-      videoModalPlayer.pause();
-      videoModalPlayer.removeAttribute('src');
-      videoModalPlayer.load();
-      if (videoModalStatus) videoModalStatus.textContent = '';
-      if (videoModalOpen) {
-        videoModalOpen.hidden = true;
-        videoModalOpen.removeAttribute('href');
-      }
+      resetVideoModal();
+    });
+
+    videoModalEl.querySelectorAll('[data-bs-dismiss="modal"]').forEach(function (closeButton) {
+      closeButton.addEventListener('click', hideManualVideoModal);
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') hideManualVideoModal();
     });
 
     // Player nhúng không giải mã được (thường gặp trên mobile với .mov/HEVC, .mkv, .webm tùy thiết bị).
@@ -251,7 +257,7 @@
       if (!videoModalPlayer.getAttribute('src')) return;
       if (videoModalStatus) {
         videoModalStatus.textContent =
-          'Trình duyệt không phát được định dạng video này. Hãy mở bằng trình phát của thiết bị bên dưới.';
+          'Trình duyệt không phát được định dạng video này. Hãy bấm nút mở bằng trình phát của thiết bị trong popup này.';
       }
     });
 
@@ -300,13 +306,12 @@
             throw new Error('Không nhận được đường dẫn video.');
           }
 
-          showInlineVideo(panel, data.url);
-
-          setStatus('Đã lấy đường dẫn. Nếu popup không hiện, xem video ngay bên dưới.', false);
-          if (!videoModal || !videoModalPlayer) {
+          if (!videoModalEl || !videoModalPlayer) {
+            window.location.href = data.url;
             return;
           }
 
+          setStatus('Đã lấy đường dẫn. Đang mở popup xem video...', false);
           if (videoModalStatus) videoModalStatus.textContent = '';
           // Luôn chuẩn bị link mở bằng trình phát gốc — trên mobile đây là cách xem đáng tin cậy nhất.
           if (videoModalOpen) {
@@ -317,11 +322,12 @@
           // Gọi load() để iOS Safari chắc chắn nhận src mới (nhất là sau khi src cũ đã bị gỡ khi đóng popup).
           videoModalPlayer.load();
           if (videoModalStatus) videoModalStatus.textContent = 'Đang tải video...';
-          try {
-            videoModal.show();
-          } catch (error) {
-            setStatus('Không mở được popup trên thiết bị này. Xem video ngay bên dưới.', false);
+          if (showVideoModal()) {
+            setStatus('Đã mở popup xem video.', false);
+            return;
           }
+
+          window.location.href = data.url;
         })
         .catch(function (error) {
           setStatus(error.message || 'Có lỗi xảy ra.', true);

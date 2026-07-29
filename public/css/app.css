@@ -1502,33 +1502,24 @@ body[data-role="student"] .topbar {
   white-space: pre;
 }
 
-.video-view-panel {
-  display: grid;
-  gap: var(--space-xs);
-  justify-items: start;
-  min-width: min(100%, 24rem);
+#videoModal {
+  z-index: 1080;
 }
 
-.button-row .video-view-panel {
-  flex: 1 1 24rem;
+.modal-backdrop {
+  z-index: 1070;
 }
 
-.video-inline {
-  width: min(100%, 38rem);
-  padding: var(--space-sm);
-  border: var(--rule-hair) solid var(--color-rule);
-  border-radius: var(--radius-md);
-  background: var(--color-paper-2);
-}
+@media (max-width: 35.999rem) {
+  #videoModal .modal-body {
+    display: grid;
+    align-content: start;
+    gap: var(--space-sm);
+  }
 
-.video-inline[hidden] {
-  display: none;
-}
-
-.video-inline__player {
-  width: 100%;
-  max-height: 55vh;
-  background: var(--color-ink);
+  #videoModalPlayer {
+    max-height: calc(100dvh - 9rem) !important;
+  }
 }
 
 .status-option {
