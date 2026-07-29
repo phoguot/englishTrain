@@ -42,6 +42,114 @@
     });
   }
 
+  function fetchJson(url) {
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = controller ? window.setTimeout(function () {
+      controller.abort();
+    }, 20000) : null;
+
+    return fetch(url, controller ? { signal: controller.signal } : undefined)
+      .then(function (response) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.indexOf('application/json') === -1) {
+          return response.text().then(function () {
+            throw new Error(response.ok
+              ? 'Máy chủ trả về dữ liệu không đúng định dạng.'
+              : 'Không lấy được video (mã ' + response.status + ').');
+          });
+        }
+
+        return response.json().then(function (data) {
+          if (!response.ok) throw new Error(data.error || 'Không lấy được video.');
+          return data;
+        });
+      })
+      .catch(function (error) {
+        if (error && error.name === 'AbortError') {
+          throw new Error('Kết nối quá lâu, vui lòng thử lại.');
+        }
+        throw error;
+      })
+      .finally(function () {
+        if (timer) window.clearTimeout(timer);
+      });
+  }
+
+  function inlineVideoViewer(panel) {
+    panel.classList.add('video-view-panel');
+
+    let viewer = panel.querySelector('[data-video-inline]');
+    if (viewer) {
+      return {
+        viewer: viewer,
+        player: viewer.querySelector('[data-video-inline-player]'),
+        status: viewer.querySelector('[data-video-inline-status]'),
+        openLink: viewer.querySelector('[data-video-inline-open]'),
+      };
+    }
+
+    viewer = document.createElement('div');
+    viewer.className = 'video-inline mt-2';
+    viewer.setAttribute('data-video-inline', '');
+    viewer.hidden = true;
+
+    const player = document.createElement('video');
+    player.className = 'video-inline__player w-100 d-block';
+    player.setAttribute('data-video-inline-player', '');
+    player.setAttribute('controls', '');
+    player.setAttribute('playsinline', '');
+    player.setAttribute('preload', 'metadata');
+
+    const inlineStatus = document.createElement('p');
+    inlineStatus.className = 'field__help mt-2 mb-2';
+    inlineStatus.setAttribute('data-video-inline-status', '');
+
+    const openLink = document.createElement('a');
+    openLink.className = 'btn btn--outline';
+    openLink.setAttribute('data-video-inline-open', '');
+    openLink.setAttribute('target', '_blank');
+    openLink.setAttribute('rel', 'noopener');
+    openLink.textContent = 'Mở video trong tab mới';
+
+    player.addEventListener('loadedmetadata', function () {
+      inlineStatus.textContent = '';
+      inlineStatus.classList.remove('field__help--error');
+    });
+
+    player.addEventListener('error', function () {
+      if (!player.getAttribute('src')) return;
+      inlineStatus.textContent = 'Trình duyệt không phát được định dạng này tại đây. Hãy mở video trong tab mới.';
+      inlineStatus.classList.add('field__help--error');
+    });
+
+    viewer.appendChild(player);
+    viewer.appendChild(inlineStatus);
+    viewer.appendChild(openLink);
+
+    const status = panel.querySelector('[data-video-view-status]');
+    if (status) {
+      status.insertAdjacentElement('afterend', viewer);
+    } else {
+      panel.appendChild(viewer);
+    }
+
+    return { viewer: viewer, player: player, status: inlineStatus, openLink: openLink };
+  }
+
+  function showInlineVideo(panel, url) {
+    const inline = inlineVideoViewer(panel);
+    if (!inline.player || !inline.openLink) return;
+
+    inline.openLink.href = url;
+    inline.player.src = url;
+    inline.player.load();
+    if (inline.status) {
+      inline.status.textContent = 'Nếu popup không hiện, xem video ngay tại đây hoặc mở trong tab mới.';
+      inline.status.classList.remove('field__help--error');
+    }
+    inline.viewer.hidden = false;
+  }
+
   // ── Nộp video (student) ────────────────────────────────────────────────
   document.querySelectorAll('[data-video-upload]').forEach(function (panel) {
     const input = panel.querySelector('[data-video-input]');
@@ -146,6 +254,10 @@
           'Trình duyệt không phát được định dạng video này. Hãy mở bằng trình phát của thiết bị bên dưới.';
       }
     });
+
+    videoModalPlayer.addEventListener('loadedmetadata', function () {
+      if (videoModalStatus) videoModalStatus.textContent = '';
+    });
   }
 
   document.querySelectorAll('[data-video-view]').forEach(function (panel) {
@@ -153,24 +265,48 @@
     const status = panel.querySelector('[data-video-view-status]');
     if (!button) return;
 
-    button.addEventListener('click', function () {
-      if (!videoModal || !videoModalPlayer) {
-        if (status) status.textContent = 'Trình phát video chưa sẵn sàng, vui lòng tải lại trang.';
+    const originalLabel = button.textContent;
+
+    function setStatus(message, isError) {
+      if (!status) return;
+      status.textContent = message;
+      status.classList.toggle('field__help--error', Boolean(isError));
+    }
+
+    function setLoading(isLoading) {
+      button.disabled = isLoading;
+      if (isLoading) {
+        button.setAttribute('data-state', 'loading');
+        button.textContent = 'Đang mở...';
         return;
       }
 
-      button.disabled = true;
-      if (status) status.textContent = 'Đang lấy đường dẫn video...';
+      button.removeAttribute('data-state');
+      button.textContent = originalLabel;
+    }
 
-      fetch(panel.dataset.videoUrlRoute)
-        .then(function (response) {
-          return response.json().then(function (data) {
-            if (!response.ok) throw new Error(data.error || 'Không lấy được video.');
-            return data;
-          });
-        })
+    button.addEventListener('click', function () {
+      if (!panel.dataset.videoUrlRoute) {
+        setStatus('Thiếu đường dẫn xem video, vui lòng tải lại trang.', true);
+        return;
+      }
+
+      setLoading(true);
+      setStatus('Đang lấy đường dẫn video...', false);
+
+      fetchJson(panel.dataset.videoUrlRoute)
         .then(function (data) {
-          if (status) status.textContent = '';
+          if (typeof data.url !== 'string' || data.url === '') {
+            throw new Error('Không nhận được đường dẫn video.');
+          }
+
+          showInlineVideo(panel, data.url);
+
+          setStatus('Đã lấy đường dẫn. Nếu popup không hiện, xem video ngay bên dưới.', false);
+          if (!videoModal || !videoModalPlayer) {
+            return;
+          }
+
           if (videoModalStatus) videoModalStatus.textContent = '';
           // Luôn chuẩn bị link mở bằng trình phát gốc — trên mobile đây là cách xem đáng tin cậy nhất.
           if (videoModalOpen) {
@@ -180,13 +316,18 @@
           videoModalPlayer.src = data.url;
           // Gọi load() để iOS Safari chắc chắn nhận src mới (nhất là sau khi src cũ đã bị gỡ khi đóng popup).
           videoModalPlayer.load();
-          videoModal.show();
+          if (videoModalStatus) videoModalStatus.textContent = 'Đang tải video...';
+          try {
+            videoModal.show();
+          } catch (error) {
+            setStatus('Không mở được popup trên thiết bị này. Xem video ngay bên dưới.', false);
+          }
         })
         .catch(function (error) {
-          if (status) status.textContent = error.message || 'Có lỗi xảy ra.';
+          setStatus(error.message || 'Có lỗi xảy ra.', true);
         })
         .finally(function () {
-          button.disabled = false;
+          setLoading(false);
         });
     });
   });
