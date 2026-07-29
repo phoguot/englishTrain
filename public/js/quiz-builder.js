@@ -98,6 +98,101 @@
         addQuestion();
     });
 
+    setupImport();
+
+    /**
+     * Nhập câu hỏi từ file Excel/Word: gửi file lên server, server trả về danh sách câu hỏi,
+     * JS chỉ vẽ thêm thẻ câu hỏi. Giáo viên sửa lại rồi mới lưu — server vẫn kiểm tra lần cuối.
+     */
+    function setupImport() {
+        var fileInput = document.getElementById('quiz-import-file');
+        var runButton = document.getElementById('quiz-import-run');
+        var message = document.getElementById('quiz-import-message');
+
+        if (!fileInput || !runButton || !message) {
+            return;
+        }
+
+        function say(text, isError) {
+            message.textContent = text;
+            message.classList.toggle('field__help--error', Boolean(isError));
+        }
+
+        runButton.addEventListener('click', function () {
+            var file = fileInput.files && fileInput.files[0];
+            if (!file) {
+                say('Vui lòng chọn file câu hỏi trước.', true);
+                return;
+            }
+
+            var data = new FormData();
+            data.append('quiz_file', file);
+            data.append('_csrf', fileInput.dataset.csrf || '');
+
+            runButton.disabled = true;
+            say('Đang đọc file...', false);
+
+            window.fetch(fileInput.dataset.url, {
+                method: 'POST',
+                body: data,
+                credentials: 'same-origin'
+            }).then(function (response) {
+                return response.json().catch(function () {
+                    return {};
+                }).then(function (body) {
+                    return { ok: response.ok, body: body };
+                });
+            }).then(function (result) {
+                if (!result.ok) {
+                    say(result.body.error || 'Không đọc được file. Vui lòng thử lại.', true);
+                    return;
+                }
+
+                var questions = result.body.questions || [];
+                if (questions.length === 0) {
+                    say('File không có câu hỏi nào đọc được.', true);
+                    return;
+                }
+
+                removeBlankQuestion();
+                questions.forEach(function (question) {
+                    addQuestion(question);
+                });
+
+                var text = 'Đã nhập ' + questions.length + ' câu hỏi từ file. Kiểm tra lại trước khi lưu.';
+                var warnings = result.body.warnings || [];
+                if (warnings.length > 0) {
+                    text += ' Lưu ý: ' + warnings.join(' ');
+                }
+                say(text, warnings.length > 0);
+                fileInput.value = '';
+            }).catch(function () {
+                say('Không kết nối được máy chủ. Vui lòng thử lại.', true);
+            }).then(function () {
+                runButton.disabled = false;
+            });
+        });
+    }
+
+    /** Bỏ thẻ câu hỏi trống duy nhất mà form tự tạo, để câu nhập vào bắt đầu từ câu 1. */
+    function removeBlankQuestion() {
+        if (container.children.length !== 1) {
+            return;
+        }
+
+        var card = container.children[0];
+        var filled = Array.prototype.some.call(
+            card.querySelectorAll('.question-text, .option-text'),
+            function (input) {
+                return input.value.trim() !== '';
+            }
+        );
+
+        if (!filled) {
+            card.remove();
+        }
+    }
+
     var existing = [];
     var existingScript = document.getElementById('existing-questions');
     if (existingScript) {

@@ -11,6 +11,7 @@ use Assignment\Model\Assignment\AssignmentMapper;
 use Assignment\Model\Submission\SubmissionMapper;
 use Assignment\Service\AssignmentService;
 use Assignment\Service\QuizGrader;
+use Assignment\Service\QuizImportService;
 use Assignment\Service\QuizJsonBuilder;
 use Assignment\Service\R2StorageService;
 use Assignment\Service\SubmissionService;
@@ -41,6 +42,17 @@ return [
                     'defaults' => [
                         'controller' => AssignmentController::class,
                         'action'     => 'create',
+                    ],
+                ],
+            ],
+            // Literal, không đụng assignment_view (/assignments/:id) vì :id ràng buộc là số.
+            'assignment_quiz_import' => [
+                'type'    => Literal::class,
+                'options' => [
+                    'route'    => '/assignments/quiz-import',
+                    'defaults' => [
+                        'controller' => AssignmentController::class,
+                        'action'     => 'quizImport',
                     ],
                 ],
             ],
@@ -176,6 +188,7 @@ return [
                     $c->get(AssignmentService::class),
                     $c->get(SubmissionService::class),
                     $c->get(ClassroomService::class),
+                    $c->get(QuizImportService::class),
                 ),
             SubmissionController::class => static fn (ContainerInterface $c): SubmissionController
                 => new SubmissionController($c->get(SubmissionService::class)),
@@ -194,6 +207,7 @@ return [
                 => new SubmissionMapper($c->get(Adapter::class)),
             QuizGrader::class        => static fn (): QuizGrader => new QuizGrader(),
             QuizJsonBuilder::class   => static fn (): QuizJsonBuilder => new QuizJsonBuilder(),
+            QuizImportService::class => static fn (): QuizImportService => new QuizImportService(),
             R2StorageService::class  => static function (ContainerInterface $c): R2StorageService {
                 $config = $c->get('config')['r2'] ?? [];
 

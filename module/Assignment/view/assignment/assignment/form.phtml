@@ -107,6 +107,63 @@ if (($values['deadline_at'] ?? '') !== '') {
             <h2>Câu hỏi trắc nghiệm</h2>
             <button type="button" id="add-question" class="btn btn--outline">Thêm câu hỏi</button>
         </div>
+
+        <div class="quiz-import">
+            <label for="quiz-import-file">Nhập câu hỏi từ file Excel hoặc Word</label>
+            <div class="button-row">
+                <!-- Không đặt name= — file này gửi riêng bằng fetch, không đi kèm form bài tập. -->
+                <input class="field__control" type="file" id="quiz-import-file"
+                       accept=".xlsx,.xls,.csv,.docx"
+                       data-url="<?= $this->escapeHtmlAttr($this->url('assignment_quiz_import')) ?>"
+                       data-csrf="<?= $this->escapeHtmlAttr($csrfToken) ?>">
+                <button type="button" id="quiz-import-run" class="btn btn--outline">Đọc file</button>
+            </div>
+            <p class="field__help" id="quiz-import-message" role="status" aria-live="polite">
+                Câu hỏi đọc được sẽ thêm vào danh sách bên dưới — bạn vẫn sửa lại được trước khi lưu.
+            </p>
+            <details class="quiz-import__guide">
+                <summary>Xem cách trình bày file</summary>
+                <p><strong>Excel / CSV</strong> — mỗi dòng một câu, cột cuối là đáp án đúng:</p>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Câu hỏi</th>
+                                <th scope="col">Đáp án A</th>
+                                <th scope="col">Đáp án B</th>
+                                <th scope="col">Đáp án C</th>
+                                <th scope="col">Đáp án đúng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Thủ đô của Anh là gì?</td>
+                                <td>Paris</td>
+                                <td>London</td>
+                                <td>Rome</td>
+                                <td>B</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="muted">
+                    Ô "Đáp án đúng" ghi A/B/C/D, 1/2/3/4 hoặc chép nguyên nội dung đáp án đều được.
+                    Dòng tiêu đề có thể bỏ; khi đó cột đầu là câu hỏi, cột cuối là đáp án đúng.
+                </p>
+                <p><strong>Word (.docx)</strong> — mỗi câu một khối dòng:</p>
+                <pre class="quiz-import__sample">Câu 1: Thủ đô của Anh là gì?
+A. Paris
+B. London
+C. Rome
+Đáp án: B</pre>
+                <p class="muted">
+                    Có thể đánh dấu đáp án đúng bằng dấu <code>*</code> ngay trước chữ cái
+                    (<code>*B. London</code>) thay cho dòng "Đáp án:".
+                    File <code>.doc</code> cũ cần lưu lại thành <code>.docx</code>.
+                </p>
+            </details>
+        </div>
+
         <div id="questions"></div>
     </section>
 

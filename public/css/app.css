@@ -1477,6 +1477,31 @@ body[data-role="student"] .topbar {
   justify-self: start;
 }
 
+/* Khối nhập câu hỏi từ file Excel/Word ở đầu phần trắc nghiệm. */
+.quiz-import {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  margin-block-end: var(--space-lg);
+  border: var(--rule-hair) solid var(--color-rule);
+  background: var(--color-surface);
+}
+
+.quiz-import__guide {
+  margin-block-start: var(--space-xs);
+}
+
+.quiz-import__guide summary {
+  cursor: pointer;
+}
+
+.quiz-import__sample {
+  padding: var(--space-sm);
+  overflow-x: auto;
+  border: var(--rule-hair) solid var(--color-rule);
+  white-space: pre;
+}
+
 .status-option {
   position: relative;
 }

@@ -11,6 +11,7 @@ use Application\Exception\ValidationException;
 use Assignment\Exception\AssignmentClosedException;
 use Assignment\Model\Assignment\AssignmentModel;
 use Assignment\Service\AssignmentService;
+use Assignment\Service\QuizImportService;
 use Assignment\Service\SubmissionService;
 use Classroom\Service\ClassroomService;
 use Laminas\View\Model\JsonModel;
@@ -22,6 +23,7 @@ use Laminas\View\Model\ViewModel;
  * - create, edit, delete: chỉ teacher (assertTeacher trong action).
  * - submit: chỉ student.
  * - uploadUrl, uploadDone: chỉ student — luồng JSON riêng cho browser PUT thẳng R2.
+ * - quizImport: chỉ teacher — đọc file Excel/Word thành danh sách câu hỏi, trả JSON, không lưu DB.
  *
  * Controller KHÔNG validate và KHÔNG kiểm value — đưa POST thô cho Service, Service chạy
  * Filter class rồi ném ValidationException; ở đây chỉ lo render lại form / flash lỗi.
@@ -38,6 +40,7 @@ class AssignmentController extends BaseController
         private readonly AssignmentService $assignmentService,
         private readonly SubmissionService $submissionService,
         private readonly ClassroomService $classroomService,
+        private readonly QuizImportService $quizImportService,
     ) {
     }
 
@@ -111,6 +114,29 @@ class AssignmentController extends BaseController
             [],
             ['query' => ['classroom' => (int) $assignment->getClassroomId()]],
         );
+    }
+
+    /**
+     * Đọc file Excel/Word của giáo viên thành danh sách câu hỏi trắc nghiệm, trả JSON cho form
+     * tự điền. KHÔNG lưu gì — giáo viên xem lại, sửa rồi mới bấm lưu bài tập như bình thường.
+     * Cùng quy ước JSON với luồng upload video: tự bắt exception tại action, lỗi là {error: string}.
+     */
+    public function quizImportAction(): JsonModel
+    {
+        if ($this->currentRole() !== 'teacher') {
+            return $this->jsonError(403, 'Chỉ giáo viên được nhập câu hỏi từ file.');
+        }
+        if (!$this->getRequest()->isPost()) {
+            return $this->jsonError(405, 'Phương thức không hợp lệ.');
+        }
+
+        try {
+            $result = $this->quizImportService->import($this->getAllPostParams());
+        } catch (ValidationException $e) {
+            return $this->jsonError(422, $this->firstErrorMessage($e));
+        }
+
+        return new JsonModel($result);
     }
 
     public function viewAction(): mixed
