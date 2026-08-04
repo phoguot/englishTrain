@@ -10,8 +10,41 @@ namespace User\Model\User;
  */
 class UserModel
 {
+    // `user.role` là TINYINT — Ý NGHĨA TỪNG SỐ CHỈ KHAI Ở ĐÂY, mọi module so bằng hằng này.
+    // Không có "guest": chưa đăng nhập là KHÔNG có user, xem BaseController::ROLE_GUEST.
+
+    public const ROLE_ADMIN   = 1;
+    public const ROLE_TEACHER = 2;
+    public const ROLE_STUDENT = 3;
+
+    /** @var array<int,string> mã vai trò => nhãn tiếng Việt (dropdown, bảng danh sách) */
+    public const ROLE_LABELS = [
+        self::ROLE_ADMIN   => 'Quản trị',
+        self::ROLE_TEACHER => 'Giáo viên',
+        self::ROLE_STUDENT => 'Học sinh',
+    ];
+
+    // `user.teacher_type` là TINYINT — Ý NGHĨA TỪNG SỐ CHỈ KHAI Ở ĐÂY.
+    // Thêm loại mới: cấp số tiếp theo + thêm nhãn vào TEACHER_TYPE_LABELS, không phải ALTER TABLE.
+    // Không bao giờ viết số trần (1, 2) ở Service, Filter, view hay SQL.
+
+    /** Giáo viên tiếng Anh — loại duy nhất được giao bài tập dạng video. */
+    public const TEACHER_TYPE_ENGLISH = 1;
+
+    /** Giáo viên môn khác — điểm danh, học phí, bài tự luận/trắc nghiệm; không giao bài video. */
+    public const TEACHER_TYPE_GENERAL = 2;
+
+    /** @var array<int,string> giá trị hợp lệ => nhãn tiếng Việt (dùng cho dropdown + Filter) */
+    public const TEACHER_TYPE_LABELS = [
+        self::TEACHER_TYPE_ENGLISH => 'Giáo viên tiếng Anh (giao được bài video)',
+        self::TEACHER_TYPE_GENERAL => 'Giáo viên khác (điểm danh, học phí, bài không video)',
+    ];
+
     private ?int $id = null;
-    private ?string $role = null;
+    /** Xem ROLE_*. */
+    private ?int $role = null;
+    /** Chỉ có nghĩa khi role = 'teacher'; role khác luôn null. Xem TEACHER_TYPE_*. */
+    private ?int $teacherType = null;
     private ?string $fullName = null;
     private ?string $email = null;
     private ?string $phone = null;
@@ -29,14 +62,24 @@ class UserModel
         $this->id = $id;
     }
 
-    public function getRole(): ?string
+    public function getRole(): ?int
     {
         return $this->role;
     }
 
-    public function setRole(?string $role): void
+    public function setRole(?int $role): void
     {
         $this->role = $role;
+    }
+
+    public function getTeacherType(): ?int
+    {
+        return $this->teacherType;
+    }
+
+    public function setTeacherType(?int $teacherType): void
+    {
+        $this->teacherType = $teacherType;
     }
 
     public function getFullName(): ?string
@@ -108,7 +151,8 @@ class UserModel
     public function exchangeArray(array $row): self
     {
         $this->id           = isset($row['id']) ? (int) $row['id'] : null;
-        $this->role         = $row['role'] ?? null;
+        $this->role         = ($row['role'] ?? null) !== null ? (int) $row['role'] : null;
+        $this->teacherType  = ($row['teacher_type'] ?? null) !== null ? (int) $row['teacher_type'] : null;
         $this->fullName     = $row['full_name'] ?? null;
         $this->email        = $row['email'] ?? null;
         $this->phone        = $row['phone'] ?? null;
@@ -124,10 +168,11 @@ class UserModel
     {
         return new UserDto(
             (int) $this->id,
-            (string) $this->role,
+            (int) $this->role,
             (string) $this->fullName,
             (string) $this->username,
             $this->status,
+            $this->teacherType,
         );
     }
 }

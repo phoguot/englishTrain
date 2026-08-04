@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Report\Filter\StudentReport;
 
 use Classroom\Service\ClassroomService;
+use User\Model\User\UserModel;
 use Laminas\Filter\Callback;
 use Laminas\Filter\StringTrim;
 use Laminas\Filter\ToInt;
@@ -26,7 +27,7 @@ class StudentReportSaveFilter extends InputFilter
     ) {
         $classroomIds = array_map(
             static fn (array $row): int => (int) $row['id'],
-            $classroomService->listRowsForActor($teacherId, 'teacher'),
+            $classroomService->listRowsForActor($teacherId, UserModel::ROLE_TEACHER),
         );
         $classroomId = is_numeric($rawData['classroom_id'] ?? null) ? (int) $rawData['classroom_id'] : 0;
         $studentIds = in_array($classroomId, $classroomIds, true)

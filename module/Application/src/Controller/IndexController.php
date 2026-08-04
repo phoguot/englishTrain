@@ -24,7 +24,7 @@ class IndexController extends BaseController
         $model = $this->getViewModel();
         $model->setVariables($this->dashboardService->forActor(
             (int) $this->currentUserId(),
-            (string) $this->currentRole(),
+            (int) $this->currentRole(),
         ));
 
         return $model;

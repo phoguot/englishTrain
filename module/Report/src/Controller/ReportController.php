@@ -10,10 +10,11 @@ use Application\Exception\ValidationException;
 use Laminas\View\Model\ViewModel;
 use Report\Model\StudentReport\StudentReportModel;
 use Report\Service\ReportService;
+use User\Model\User\UserModel;
 
 class ReportController extends BaseController
 {
-    protected const ALLOWED_ROLES = ['teacher', 'student'];
+    protected const ALLOWED_ROLES = [UserModel::ROLE_TEACHER, UserModel::ROLE_STUDENT];
 
     public function __construct(private readonly ReportService $reportService)
     {
@@ -80,7 +81,7 @@ class ReportController extends BaseController
 
     public function myReportsAction(): ViewModel
     {
-        if ($this->currentRole() !== 'student') {
+        if ($this->currentRole() !== UserModel::ROLE_STUDENT) {
             throw new AccessDeniedException('Chỉ học sinh được xem trang report cá nhân.');
         }
         $model = $this->getViewModel();
@@ -91,7 +92,7 @@ class ReportController extends BaseController
 
     private function assertTeacher(): void
     {
-        if ($this->currentRole() !== 'teacher') {
+        if ($this->currentRole() !== UserModel::ROLE_TEACHER) {
             throw new AccessDeniedException('Chỉ giáo viên được quản lý report.');
         }
     }

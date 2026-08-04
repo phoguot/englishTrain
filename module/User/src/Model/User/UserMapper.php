@@ -98,6 +98,7 @@ class UserMapper
     {
         $data = [
             'role' => $item->getRole(),
+            'teacher_type' => $item->getTeacherType(),
             'full_name' => $item->getFullName(),
             'email' => $item->getEmail(),
             'phone' => $item->getPhone(),
@@ -191,9 +192,10 @@ class UserMapper
      * Lấy user đang hoạt động (status=1) theo role, sắp theo tên — dùng cho dropdown/checkbox
      * (chọn giáo viên phụ trách, liệt kê học sinh để gán vào lớp).
      *
+     * @param int $role UserModel::ROLE_*
      * @return UserModel[]
      */
-    public function getUsersByRole(string $role): array
+    public function getUsersByRole(int $role): array
     {
         $sql    = $this->sql();
         $select = $sql->select(UserMapper::TABLE_NAME);

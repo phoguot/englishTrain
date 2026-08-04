@@ -16,6 +16,7 @@ use Attendance\Model\AttendanceSessionStudent\AttendanceSessionStudentMapper;
 use Attendance\Model\AttendanceSummary;
 use Classroom\Service\ClassroomService;
 use Laminas\Db\Adapter\Adapter;
+use User\Model\User\UserModel;
 use User\Service\UserService;
 
 /**
@@ -28,10 +29,6 @@ use User\Service\UserService;
  */
 class AttendanceService
 {
-    private const ROLE_ADMIN   = 'admin';
-    private const ROLE_TEACHER = 'teacher';
-    private const ROLE_STUDENT = 'student';
-
     public function __construct(
         private readonly AttendanceSessionMapper $sessionMapper,
         private readonly AttendanceRecordMapper $recordMapper,
@@ -87,7 +84,7 @@ class AttendanceService
      *
      * @return array{classroom: \Classroom\Model\Classroom\ClassroomDto, rows: array<int, array<string,mixed>>}
      */
-    public function listSessionRows(int $classroomId, int $userId, string $role): array
+    public function listSessionRows(int $classroomId, int $userId, int $role): array
     {
         $classroom = $this->assertCanViewClassroom($classroomId, $userId, $role);
 
@@ -139,7 +136,7 @@ class AttendanceService
      * @param array<string,mixed> $data dữ liệu POST thô
      * @throws ValidationException dữ liệu sai HOẶC lớp đã có buổi trong ngày đó
      */
-    public function createSession(array $data, int $userId, string $role): AttendanceSessionModel
+    public function createSession(array $data, int $userId, int $role): AttendanceSessionModel
     {
         $values      = $this->validateSession($data, $userId, $role);
         $classroomId = (int) $values['classroom_id'];
@@ -190,7 +187,7 @@ class AttendanceService
      *
      * @return array{session: AttendanceSessionModel, classroom: \Classroom\Model\Classroom\ClassroomDto}
      */
-    public function getSessionForEdit(int $sessionId, int $userId, string $role): array
+    public function getSessionForEdit(int $sessionId, int $userId, int $role): array
     {
         $session   = $this->getSessionOrFail($sessionId);
         $classroom = $this->assertCanEditClassroom((int) $session->getClassroomId(), $userId, $role);
@@ -208,7 +205,7 @@ class AttendanceService
      * @param array<string,mixed> $data dữ liệu POST thô
      * @throws ValidationException dữ liệu sai HOẶC lớp đã có buổi khác trong ngày đó
      */
-    public function updateSession(int $sessionId, array $data, int $userId, string $role): AttendanceSessionModel
+    public function updateSession(int $sessionId, array $data, int $userId, int $role): AttendanceSessionModel
     {
         $edit        = $this->getSessionForEdit($sessionId, $userId, $role);
         $session     = $edit['session'];
@@ -246,7 +243,7 @@ class AttendanceService
      *
      * @throws ValidationException buổi đã điểm danh
      */
-    public function deleteSession(int $sessionId, int $userId, string $role): AttendanceSessionModel
+    public function deleteSession(int $sessionId, int $userId, int $role): AttendanceSessionModel
     {
         $session = $this->getSessionOrFail($sessionId);
         $this->assertCanEditClassroom((int) $session->getClassroomId(), $userId, $role);
@@ -293,7 +290,7 @@ class AttendanceService
      *     totalAmount: float
      * }
      */
-    public function getSheet(int $sessionId, int $userId, string $role): array
+    public function getSheet(int $sessionId, int $userId, int $role): array
     {
         $session   = $this->getSessionOrFail($sessionId);
         $classroom = $this->assertCanViewClassroom((int) $session->getClassroomId(), $userId, $role);
@@ -352,7 +349,7 @@ class AttendanceService
      * @param array<string,mixed> $data dữ liệu POST thô
      * @throws ValidationException
      */
-    public function saveSheet(int $sessionId, array $data, int $userId, string $role): AttendanceSessionModel
+    public function saveSheet(int $sessionId, array $data, int $userId, int $role): AttendanceSessionModel
     {
         $sheet = $this->getSheet($sessionId, $userId, $role);
 
@@ -390,18 +387,18 @@ class AttendanceService
      *     rows: array<int, array{date:string, classroomName:string, status:string, statusLabel:string, note:?string}>
      * }
      */
-    public function getStudentHistory(int $studentId, ?int $classroomId, int $userId, string $role): array
+    public function getStudentHistory(int $studentId, ?int $classroomId, int $userId, int $role): array
     {
-        if ($role === self::ROLE_ADMIN) {
+        if ($role === UserModel::ROLE_ADMIN) {
             // admin xem tất cả: chỉ kiểm lớp có tồn tại không khi có lọc theo lớp.
             if ($classroomId !== null && $classroomId > 0) {
                 $this->assertCanViewClassroom($classroomId, $userId, $role);
             }
-        } elseif ($role === self::ROLE_STUDENT) {
+        } elseif ($role === UserModel::ROLE_STUDENT) {
             if ($studentId !== $userId) {
                 throw new AccessDeniedException('Bạn chỉ xem được chuyên cần của chính mình.');
             }
-        } elseif ($role === self::ROLE_TEACHER) {
+        } elseif ($role === UserModel::ROLE_TEACHER) {
             if ($classroomId === null || $classroomId <= 0) {
                 throw new NotFoundException('Thiếu thông tin lớp cần xem.');
             }
@@ -412,7 +409,7 @@ class AttendanceService
 
         $entries = $this->sessionsOfStudent($studentId, $classroomId, null);
         if (
-            $role === self::ROLE_TEACHER
+            $role === UserModel::ROLE_TEACHER
             && !$this->classroomService->isStudentIn($studentId, (int) $classroomId)
             && $entries === []
         ) {
@@ -534,7 +531,7 @@ class AttendanceService
      * @return array{classroom_id:int, session_date:string, shift_label:?string, fee_per_session:?string, note:?string}
      * @throws ValidationException
      */
-    private function validateSession(array $data, int $userId, string $role): array
+    private function validateSession(array $data, int $userId, int $role): array
     {
         $filter = new SessionSaveFilter($this->classroomService, $userId, $role);
         $filter->setData($data);
@@ -557,12 +554,12 @@ class AttendanceService
     }
 
     /** Luật quyền theo lớp nằm ở ClassroomAccessGuard — dùng chung với TuitionService. */
-    private function assertCanViewClassroom(int $classroomId, int $userId, string $role): \Classroom\Model\Classroom\ClassroomDto
+    private function assertCanViewClassroom(int $classroomId, int $userId, int $role): \Classroom\Model\Classroom\ClassroomDto
     {
         return $this->accessGuard->assertCanView($classroomId, $userId, $role);
     }
 
-    private function assertCanEditClassroom(int $classroomId, int $userId, string $role): \Classroom\Model\Classroom\ClassroomDto
+    private function assertCanEditClassroom(int $classroomId, int $userId, int $role): \Classroom\Model\Classroom\ClassroomDto
     {
         return $this->accessGuard->assertCanEdit($classroomId, $userId, $role);
     }

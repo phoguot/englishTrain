@@ -15,6 +15,7 @@ use Laminas\Validator\NotEmpty;
 use Laminas\Validator\Regex;
 use Laminas\Validator\StringLength;
 use User\Model\User\UserMapper;
+use User\Model\User\UserModel;
 
 class UserSaveFilter extends InputFilter
 {
@@ -22,10 +23,33 @@ class UserSaveFilter extends InputFilter
     {
         $textFilters = [['name' => StringTrim::class], ['name' => StripTags::class]];
         $this->add([
-            'name' => 'role', 'required' => true,
+            'name' => 'role', 'required' => true, 'filters' => [['name' => ToInt::class]],
             'validators' => [['name' => InArray::class, 'options' => [
-                'haystack' => ['admin', 'teacher', 'student'],
+                'haystack' => array_keys(UserModel::ROLE_LABELS),
+                'strict'   => InArray::COMPARE_STRICT,
                 'messages' => [InArray::NOT_IN_ARRAY => 'Vai trò tài khoản không hợp lệ.'],
+            ]]],
+        ]);
+        // Loại giáo viên: bắt buộc khi role='teacher', phải để trống với role khác.
+        // Kiểm bằng Callback vì phụ thuộc giá trị `role` gửi cùng form ($context).
+        $this->add([
+            // continue_if_empty: giá trị rỗng vẫn phải chạy validator — teacher bỏ trống là lỗi.
+            // Không ToInt ở đây: ToInt biến chuỗi rác thành 0, mất luôn ranh giới "để trống".
+            'name' => 'teacher_type', 'required' => false, 'allow_empty' => true,
+            'continue_if_empty' => true, 'filters' => [['name' => StringTrim::class]],
+            'validators' => [['name' => Callback::class, 'options' => [
+                'callback' => static function (mixed $value, array $context = []): bool {
+                    // $context giữ dữ liệu THÔ (chưa qua ToInt) nên so bằng chuỗi số của hằng role.
+                    $role = is_scalar($context['role'] ?? null) ? trim((string) $context['role']) : '';
+                    $raw  = is_scalar($value) ? trim((string) $value) : '';
+                    if ($role !== (string) UserModel::ROLE_TEACHER) {
+                        return $raw === '';
+                    }
+
+                    // Chỉ chấp nhận đúng chuỗi số nguyên có trong bảng loại giáo viên.
+                    return ctype_digit($raw) && isset(UserModel::TEACHER_TYPE_LABELS[(int) $raw]);
+                },
+                'messages' => [Callback::INVALID_VALUE => 'Vui lòng chọn đúng loại giáo viên (chỉ tài khoản giáo viên mới có mục này).'],
             ]]],
         ]);
         $this->add([

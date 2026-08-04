@@ -12,6 +12,8 @@ use Assignment\Model\Assignment\AssignmentMapper;
 use Assignment\Model\Assignment\AssignmentModel;
 use Assignment\Model\Submission\SubmissionMapper;
 use Classroom\Service\ClassroomService;
+use User\Model\User\UserModel;
+use User\Service\UserService;
 
 /**
  * Nghiệp vụ bài tập.
@@ -26,7 +28,18 @@ class AssignmentService
         private readonly SubmissionMapper $submissionMapper,
         private readonly ClassroomService $classroomService,
         private readonly QuizJsonBuilder $quizJsonBuilder,
+        private readonly UserService $userService,
     ) {
+    }
+
+    /**
+     * Giáo viên này có được giao bài dạng video không — chỉ giáo viên tiếng Anh
+     * (`user.teacher_type = 'english'`, hỏi qua UserDto::canAssignVideo()).
+     * Controller dùng để ẩn lựa chọn "Video" trên form; AssignmentSaveFilter vẫn kiểm lại khi lưu.
+     */
+    public function canAssignVideo(int $teacherId): bool
+    {
+        return $this->userService->find($teacherId)?->canAssignVideo() === true;
     }
 
     // ── Hợp đồng dashboard cho module Application ──────────────────────────
@@ -46,7 +59,7 @@ class AssignmentService
     public function dashboardForTeacher(int $teacherId): array
     {
         $classrooms = array_values(array_filter(
-            $this->classroomService->listRowsForActor($teacherId, 'teacher'),
+            $this->classroomService->listRowsForActor($teacherId, UserModel::ROLE_TEACHER),
             static fn (array $row): bool => ($row['status'] ?? null) === 'active',
         ));
         $classroomNames = array_column($classrooms, 'name', 'id');
@@ -152,20 +165,20 @@ class AssignmentService
      *
      * @return array<int, array<string, mixed>>
      */
-    public function listRowsForActor(int $classroomId, int $userId, string $role): array
+    public function listRowsForActor(int $classroomId, int $userId, int $role): array
     {
         $classroom = $this->classroomService->find($classroomId);
         if ($classroom === null) {
             throw new NotFoundException('Lớp không tồn tại.');
         }
-        if ($role === 'teacher' && $classroom->teacherId !== $userId) {
+        if ($role === UserModel::ROLE_TEACHER && $classroom->teacherId !== $userId) {
             throw new AccessDeniedException('Bạn không phụ trách lớp này.');
         }
-        if ($role === 'student' && !$this->classroomService->isStudentIn($userId, $classroomId)) {
+        if ($role === UserModel::ROLE_STUDENT && !$this->classroomService->isStudentIn($userId, $classroomId)) {
             throw new AccessDeniedException('Bạn không thuộc lớp này.');
         }
 
-        $onlyPublished = $role === 'student';
+        $onlyPublished = $role === UserModel::ROLE_STUDENT;
         $assignments   = $this->assignmentMapper->searchClassroomAssignment($classroomId, $onlyPublished);
         if ($assignments === []) {
             return [];
@@ -173,7 +186,7 @@ class AssignmentService
 
         $ids = array_map(static fn (AssignmentModel $a): int => (int) $a->getId(), $assignments);
 
-        if ($role === 'teacher') {
+        if ($role === UserModel::ROLE_TEACHER) {
             $counts        = $this->submissionMapper->countByAssignmentIds($ids);
             $totalStudents = count($this->classroomService->studentIds($classroomId));
 
@@ -229,14 +242,14 @@ class AssignmentService
      * - student: phải thuộc lớp VÀ bài đã published — sai một trong hai → NotFound (không tiết lộ
      *   bài draft tồn tại, đúng luật "student không thấy draft kể cả gõ thẳng URL").
      */
-    public function getForView(int $id, int $userId, string $role): AssignmentModel
+    public function getForView(int $id, int $userId, int $role): AssignmentModel
     {
         $assignment = $this->assignmentMapper->getAssignment($id);
         if ($assignment === null) {
             throw new NotFoundException('Bài tập không tồn tại.');
         }
 
-        if ($role === 'teacher') {
+        if ($role === UserModel::ROLE_TEACHER) {
             if (!$this->classroomService->isTeacherOf($userId, (int) $assignment->getClassroomId())) {
                 throw new AccessDeniedException('Bạn không phụ trách lớp này.');
             }
@@ -261,7 +274,7 @@ class AssignmentService
      */
     public function create(array $data, int $teacherId): AssignmentModel
     {
-        ['values' => $values, 'quizJson' => $quizJson] = $this->validate($data);
+        ['values' => $values, 'quizJson' => $quizJson] = $this->validate($data, $teacherId);
 
         $this->assertClassroomWritable((int) $values['classroom_id'], $teacherId);
 
@@ -283,7 +296,9 @@ class AssignmentService
     {
         $model = $this->getEditable($id, $userId);
 
-        ['values' => $values, 'quizJson' => $quizJson] = $this->validate($data);
+        // Truyền loại hiện tại: bài video cũ vẫn sửa được kể cả khi giáo viên không còn
+        // được giao bài video (xem module/Assignment/CLAUDE.md).
+        ['values' => $values, 'quizJson' => $quizJson] = $this->validate($data, $userId, $model->getType());
 
         // classroom_id có thể đổi khi sửa — kiểm lớp MỚI, không chỉ lớp cũ.
         $this->assertClassroomWritable((int) $values['classroom_id'], $userId);
@@ -315,12 +330,14 @@ class AssignmentService
      * quizJson được trả kèm trong $context của exception để controller render lại câu hỏi đã gõ.
      *
      * @param array<string,mixed> $data
+     * @param int $teacherId giáo viên đang lưu bài — quyết định có được chọn loại `video` không
+     * @param string|null $currentType loại của bài đang sửa (null khi tạo mới)
      * @return array{values: array<string,mixed>, quizJson: array<int, array{question:string,options:string[],correct_index:int}>|null}
      * @throws ValidationException
      */
-    private function validate(array $data): array
+    private function validate(array $data, int $teacherId, ?string $currentType = null): array
     {
-        $filter = new AssignmentSaveFilter();
+        $filter = new AssignmentSaveFilter($this->userService, $teacherId, $currentType);
         $filter->setData($data);
 
         $errors = [];

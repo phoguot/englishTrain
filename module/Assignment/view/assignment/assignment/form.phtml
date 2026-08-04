@@ -7,6 +7,7 @@
  * @var array<string,string> $errors
  * @var array<int, array{question:string,options:string[],correct_index:int}> $quizJson
  * @var array<int, array<string,mixed>> $classrooms
+ * @var bool $canAssignVideo giáo viên tiếng Anh mới thấy lựa chọn "Video"
  */
 $action = $isEdit ? $this->url('assignment_edit', ['id' => $editId]) : $this->url('assignment_create');
 $deadlineValue = '';
@@ -56,10 +57,18 @@ if (($values['deadline_at'] ?? '') !== '') {
                 <?= isset($errors['type']) ? 'aria-invalid="true" aria-describedby="type-error"' : '' ?>>
             <option value="essay" <?= $values['type'] === 'essay' ? 'selected' : '' ?>>Tự luận</option>
             <option value="quiz" <?= $values['type'] === 'quiz' ? 'selected' : '' ?>>Trắc nghiệm</option>
-            <option value="video" <?= $values['type'] === 'video' ? 'selected' : '' ?>>Video</option>
+            <?php if ($canAssignVideo || $values['type'] === 'video'): ?>
+                <option value="video" <?= $values['type'] === 'video' ? 'selected' : '' ?>>Video</option>
+            <?php endif; ?>
         </select>
         <span class="field__help<?= isset($errors['type']) ? ' field__help--error' : '' ?>" id="type-error">
-            <?= isset($errors['type']) ? $this->escapeHtml($errors['type']) : 'Video hiện chưa hỗ trợ nộp trực tiếp.' ?>
+            <?php if (isset($errors['type'])): ?>
+                <?= $this->escapeHtml($errors['type']) ?>
+            <?php elseif ($canAssignVideo): ?>
+                Học sinh nộp bài video bằng cách tải lên trực tiếp trên trang bài tập.
+            <?php else: ?>
+                Bài dạng video chỉ dành cho giáo viên tiếng Anh.
+            <?php endif; ?>
         </span>
     </div>
 

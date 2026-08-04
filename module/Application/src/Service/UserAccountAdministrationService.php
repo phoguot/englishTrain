@@ -26,7 +26,8 @@ class UserAccountAdministrationService
         if ($current === null) {
             throw new NotFoundException('Tài khoản không tồn tại.');
         }
-        $newRole = is_scalar($data['role'] ?? null) ? trim((string) $data['role']) : '';
+        // `role` là TINYINT (UserModel::ROLE_*). 0 = form không gửi vai trò, không phải vai trò hợp lệ.
+        $newRole = is_scalar($data['role'] ?? null) ? (int) $data['role'] : 0;
         $newStatus = is_scalar($data['status'] ?? null) ? (int) $data['status'] : $current->status;
         if ($id === $actorId && ($newRole !== $current->role || $newStatus !== $current->status)) {
             throw new ValidationException([
@@ -35,7 +36,7 @@ class UserAccountAdministrationService
             ]);
         }
         if (
-            $newRole !== ''
+            $newRole !== 0
             && $newRole !== $current->role
             && $this->classroomService->hasCurrentUserReference($id)
         ) {

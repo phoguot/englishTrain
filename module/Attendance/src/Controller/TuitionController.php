@@ -10,19 +10,21 @@ use Attendance\Service\TuitionService;
 use Classroom\Service\ClassroomService;
 use Laminas\Http\Response;
 use Laminas\View\Model\ViewModel;
+use User\Model\User\UserModel;
 
 /**
  * Học phí theo buổi dạy: xem bảng tiền của một lớp trong một tháng và tải file Excel.
  *
- * Chỉ admin + teacher. **Student không vào được** (ALLOWED_ROLES) — tiền là việc của trung tâm,
- * không phải thông tin học sinh tự tra.
+ * **Chỉ teacher.** Student không vào được (tiền không phải thông tin học sinh tự tra) và
+ * **admin cũng không vào được** — thống kê tiền là việc riêng của giáo viên dạy lớp đó.
+ * Đây là ngoại lệ có chủ đích với luật "admin không bị giới hạn" ở .claude/rules/01-bao-mat.md.
  *
- * Quyền theo lớp do TuitionService kiểm (admin mọi lớp, teacher lớp mình): controller không
- * tự kiểm sở hữu, và **không** được tải file trước rồi mới kiểm quyền.
+ * Quyền theo lớp do TuitionService kiểm (teacher chỉ lớp mình): controller không tự kiểm sở hữu,
+ * và **không** được tải file trước rồi mới kiểm quyền.
  */
 class TuitionController extends BaseController
 {
-    protected const ALLOWED_ROLES = ['admin', 'teacher'];
+    protected const ALLOWED_ROLES = [UserModel::ROLE_TEACHER];
 
     public function __construct(
         private readonly TuitionService $tuitionService,
@@ -40,7 +42,7 @@ class TuitionController extends BaseController
         $classroomId = (int) $this->params()->fromQuery('classroom', 0);
         $month       = (string) $this->params()->fromQuery('month', '');
         $userId      = (int) $this->currentUserId();
-        $role        = (string) $this->currentRole();
+        $role        = (int) $this->currentRole();
 
         $model = $this->getViewModel();
         $model->setVariables([
@@ -80,7 +82,7 @@ class TuitionController extends BaseController
             $classroomId,
             $month,
             (int) $this->currentUserId(),
-            (string) $this->currentRole(),
+            (int) $this->currentRole(),
         );
 
         $path = $type === 'daily'

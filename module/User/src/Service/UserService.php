@@ -56,9 +56,10 @@ class UserService
      * Danh sách user đang hoạt động theo role (sắp theo tên) — cho dropdown giáo viên,
      * checkbox học sinh. Trả UserDto[] (không password_hash).
      *
+     * @param int $role UserModel::ROLE_*
      * @return UserDto[]
      */
-    public function findByRole(string $role): array
+    public function findByRole(int $role): array
     {
         return array_map(
             static fn ($model): UserDto => $model->toDto(),
@@ -156,7 +157,15 @@ class UserService
     /** @param array<string,mixed> $values */
     private function fill(UserModel $user, array $values, bool $isCreate): void
     {
-        $user->setRole((string) $values['role']);
+        $role = (int) $values['role'];
+        $user->setRole($role);
+        // Loại giáo viên chỉ có nghĩa với vai trò giáo viên — vai trò khác luôn về null để không
+        // còn giá trị mồ côi sau khi đổi vai trò. Giá trị đã được UserSaveFilter kiểm thuộc
+        // UserModel::TEACHER_TYPE_LABELS.
+        $teacherType = (string) ($values['teacher_type'] ?? '');
+        $user->setTeacherType(
+            $role === UserModel::ROLE_TEACHER && $teacherType !== '' ? (int) $teacherType : null,
+        );
         $user->setFullName((string) $values['full_name']);
         $user->setEmail(($values['email'] ?? '') !== '' ? (string) $values['email'] : null);
         $user->setPhone(($values['phone'] ?? '') !== '' ? (string) $values['phone'] : null);

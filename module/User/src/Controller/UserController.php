@@ -16,7 +16,7 @@ use User\Service\UserIdentityService;
 
 class UserController extends BaseController
 {
-    protected const ALLOWED_ROLES = ['admin'];
+    protected const ALLOWED_ROLES = [UserModel::ROLE_ADMIN];
 
     public function __construct(
         private readonly UserService $userService,
@@ -113,7 +113,8 @@ class UserController extends BaseController
             => is_scalar($post[$key] ?? null) ? (string) $post[$key] : $default;
         if ($post !== []) {
             $values = [
-                'role' => $value('role', 'student'),
+                'role' => (int) $value('role', (string) UserModel::ROLE_STUDENT),
+                'teacher_type' => $value('teacher_type'),
                 'full_name' => $value('full_name'),
                 'email' => $value('email'),
                 'phone' => $value('phone'),
@@ -122,7 +123,8 @@ class UserController extends BaseController
             ];
         } elseif ($existing !== null) {
             $values = [
-                'role' => (string) $existing->getRole(),
+                'role' => (int) $existing->getRole(),
+                'teacher_type' => $existing->getTeacherType() !== null ? (string) $existing->getTeacherType() : '',
                 'full_name' => (string) $existing->getFullName(),
                 'email' => (string) ($existing->getEmail() ?? ''),
                 'phone' => (string) ($existing->getPhone() ?? ''),
@@ -130,7 +132,7 @@ class UserController extends BaseController
                 'status' => $existing->getStatus(),
             ];
         } else {
-            $values = ['role' => 'student', 'full_name' => '', 'email' => '', 'phone' => '', 'username' => '', 'status' => 1];
+            $values = ['role' => UserModel::ROLE_STUDENT, 'teacher_type' => '', 'full_name' => '', 'email' => '', 'phone' => '', 'username' => '', 'status' => 1];
         }
 
         $model = $this->getViewModel();
@@ -139,6 +141,7 @@ class UserController extends BaseController
             'editId' => $existing?->getId(),
             'values' => $values,
             'errors' => $errors,
+            'teacherTypeLabels' => UserModel::TEACHER_TYPE_LABELS,
             'identities' => $existing !== null
                 ? $this->identityService->listForUser((int) $existing->getId())
                 : [],

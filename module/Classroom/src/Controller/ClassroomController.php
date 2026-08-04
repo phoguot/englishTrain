@@ -11,6 +11,7 @@ use Application\Service\ClassroomDeletionService;
 use Classroom\Model\Classroom\ClassroomModel;
 use Classroom\Service\ClassroomService;
 use Laminas\View\Model\ViewModel;
+use User\Model\User\UserModel;
 use User\Service\UserService;
 
 /**
@@ -21,7 +22,7 @@ use User\Service\UserService;
  */
 class ClassroomController extends BaseController
 {
-    protected const ALLOWED_ROLES = ['admin', 'teacher'];
+    protected const ALLOWED_ROLES = [UserModel::ROLE_ADMIN, UserModel::ROLE_TEACHER];
 
     public function __construct(
         private readonly ClassroomService $classroomService,
@@ -37,7 +38,7 @@ class ClassroomController extends BaseController
             'role'       => $this->currentRole(),
             'classrooms' => $this->classroomService->listRowsForActor(
                 (int) $this->currentUserId(),
-                (string) $this->currentRole(),
+                (int) $this->currentRole(),
             ),
         ]);
 
@@ -60,7 +61,7 @@ class ClassroomController extends BaseController
         $this->assertAdmin();
 
         $id        = (int) $this->params()->fromRoute('id', 0);
-        $classroom = $this->classroomService->getEditable($id, (int) $this->currentUserId(), (string) $this->currentRole());
+        $classroom = $this->classroomService->getEditable($id, (int) $this->currentUserId(), (int) $this->currentRole());
 
         if ($this->getRequest()->isPost()) {
             return $this->handleSave($classroom);
@@ -86,7 +87,7 @@ class ClassroomController extends BaseController
             $classroom = $this->deletionService->delete(
                 $id,
                 (int) $this->currentUserId(),
-                (string) $this->currentRole(),
+                (int) $this->currentRole(),
             );
             $this->flashMessenger()->addSuccessMessage('Đã xóa lớp "' . $classroom->getName() . '".');
         } catch (ValidationException $e) {
@@ -100,7 +101,7 @@ class ClassroomController extends BaseController
     {
         $id     = (int) $this->params()->fromRoute('id', 0);
         $userId = (int) $this->currentUserId();
-        $role   = (string) $this->currentRole();
+        $role   = (int) $this->currentRole();
 
         if ($this->getRequest()->isPost()) {
             $studentIds = $this->params()->fromPost('student_ids', []);
@@ -129,7 +130,7 @@ class ClassroomController extends BaseController
     }
 
     /** @param int[]|null $selectedIds @param array<string,string> $errors */
-    private function studentsView(int $id, int $userId, string $role, ?array $selectedIds = null, array $errors = []): mixed
+    private function studentsView(int $id, int $userId, int $role, ?array $selectedIds = null, array $errors = []): mixed
     {
         $data = $this->classroomService->getManageStudentsData($id, $userId, $role);
 
@@ -154,7 +155,7 @@ class ClassroomController extends BaseController
 
     private function assertAdmin(): void
     {
-        if ($this->currentRole() !== 'admin') {
+        if ($this->currentRole() !== UserModel::ROLE_ADMIN) {
             throw new AccessDeniedException('Chỉ admin được tạo/sửa lớp.');
         }
     }
@@ -176,7 +177,7 @@ class ClassroomController extends BaseController
                     (int) $existing->getId(),
                     $post,
                     (int) $this->currentUserId(),
-                    (string) $this->currentRole(),
+                    (int) $this->currentRole(),
                 );
                 $this->flashMessenger()->addSuccessMessage('Đã cập nhật lớp "' . $saved->getName() . '".');
             }
@@ -228,7 +229,7 @@ class ClassroomController extends BaseController
             'editId'   => $existing?->getId(),
             'values'   => $values,
             'errors'   => $errors,
-            'teachers' => $this->userService->findByRole('teacher'),
+            'teachers' => $this->userService->findByRole(UserModel::ROLE_TEACHER),
         ]);
         $model->setTemplate('classroom/classroom/form');
 

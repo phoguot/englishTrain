@@ -8,6 +8,7 @@ use Application\Controller\BaseController;
 use Application\Exception\AccessDeniedException;
 use Application\Exception\ValidationException;
 use User\Service\AuthService;
+use User\Model\User\UserModel;
 use User\Service\MagicLinkService;
 use User\Service\RememberMeService;
 use User\Service\UserService;
@@ -41,12 +42,12 @@ class MagicLinkController extends BaseController
         if (!$this->getRequest()->isPost()) {
             throw new AccessDeniedException('Chỉ chấp nhận tạo link từ biểu mẫu.');
         }
-        $role = (string) $this->currentRole();
+        $role = (int) $this->currentRole();
         // Endpoint này chỉ nhận admin — module User đứng dưới Classroom theo sơ đồ phụ thuộc,
         // nên không được kiểm `teachesStudent()` ở đây. Luồng teacher tạo link cho học sinh
         // sẽ đặt ở module Classroom (nơi biết teacher-teaches-student) và gọi MagicLinkService
         // bằng creatorRole='teacher'. Xem module/User/CLAUDE.md §"Magic-link".
-        if ($role !== 'admin') {
+        if ($role !== UserModel::ROLE_ADMIN) {
             throw new AccessDeniedException('Bạn không có quyền tạo link đăng nhập.');
         }
 

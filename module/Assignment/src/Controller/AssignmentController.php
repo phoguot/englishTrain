@@ -16,6 +16,7 @@ use Assignment\Service\SubmissionService;
 use Classroom\Service\ClassroomService;
 use Laminas\View\Model\JsonModel;
 use Laminas\View\Model\ViewModel;
+use User\Model\User\UserModel;
 
 /**
  * CRUD bài tập + xem chi tiết + nộp bài (essay/quiz) + xin/ xác nhận upload video R2.
@@ -34,7 +35,7 @@ use Laminas\View\Model\ViewModel;
  */
 class AssignmentController extends BaseController
 {
-    protected const ALLOWED_ROLES = ['teacher', 'student'];
+    protected const ALLOWED_ROLES = [UserModel::ROLE_TEACHER, UserModel::ROLE_STUDENT];
 
     public function __construct(
         private readonly AssignmentService $assignmentService,
@@ -53,7 +54,7 @@ class AssignmentController extends BaseController
         $assignments = $this->assignmentService->listRowsForActor(
             $classroomId,
             (int) $this->currentUserId(),
-            (string) $this->currentRole(),
+            (int) $this->currentRole(),
         );
         $classroom = $this->classroomService->find($classroomId);
 
@@ -62,7 +63,7 @@ class AssignmentController extends BaseController
             'role'          => $this->currentRole(),
             'classroomId'   => $classroomId,
             'classroomName' => $classroom?->name ?? '',
-            'canEdit'       => $this->currentRole() === 'teacher' && $classroom !== null && !$classroom->isArchived(),
+            'canEdit'       => $this->currentRole() === UserModel::ROLE_TEACHER && $classroom !== null && !$classroom->isArchived(),
             'assignments'   => $assignments,
         ]);
         $model->setTemplate('assignment/assignment/index');
@@ -123,7 +124,7 @@ class AssignmentController extends BaseController
      */
     public function quizImportAction(): JsonModel
     {
-        if ($this->currentRole() !== 'teacher') {
+        if ($this->currentRole() !== UserModel::ROLE_TEACHER) {
             return $this->jsonError(403, 'Chỉ giáo viên được nhập câu hỏi từ file.');
         }
         if (!$this->getRequest()->isPost()) {
@@ -143,14 +144,14 @@ class AssignmentController extends BaseController
     {
         $id     = (int) $this->params()->fromRoute('id', 0);
         $userId = (int) $this->currentUserId();
-        $role   = (string) $this->currentRole();
+        $role   = (int) $this->currentRole();
 
         $assignment = $this->assignmentService->getForView($id, $userId, $role);
 
         $model = $this->getViewModel();
         $model->setVariables(['assignment' => $assignment, 'role' => $role]);
 
-        if ($role === 'teacher') {
+        if ($role === UserModel::ROLE_TEACHER) {
             $grading = $this->submissionService->getForGrading($id, $userId);
             $classroom = $this->classroomService->find((int) $assignment->getClassroomId());
             $model->setVariable('rows', $grading['rows']);
@@ -172,7 +173,7 @@ class AssignmentController extends BaseController
 
     public function submitAction(): mixed
     {
-        if ($this->currentRole() !== 'student') {
+        if ($this->currentRole() !== UserModel::ROLE_STUDENT) {
             throw new AccessDeniedException('Chỉ học sinh được nộp bài.');
         }
         if (!$this->getRequest()->isPost()) {
@@ -187,7 +188,7 @@ class AssignmentController extends BaseController
         $studentId = (int) $this->currentUserId();
 
         // getForView xác nhận: đúng học sinh của lớp, bài đã published (student không thấy draft).
-        $assignment = $this->assignmentService->getForView($id, $studentId, 'student');
+        $assignment = $this->assignmentService->getForView($id, $studentId, UserModel::ROLE_STUDENT);
         $post       = $this->getAllPostParams();
 
         try {
@@ -205,7 +206,7 @@ class AssignmentController extends BaseController
             $model = $this->getViewModel();
             $model->setVariables([
                 'assignment' => $assignment,
-                'role' => 'student',
+                'role' => UserModel::ROLE_STUDENT,
                 'mySubmission' => $this->submissionService->getMySubmission($id, $studentId),
                 'submitValues' => $post,
                 'submitErrors' => $e->getErrors(),
@@ -221,7 +222,7 @@ class AssignmentController extends BaseController
     /** Bước 1/3 nộp video: xin presigned PUT URL. Chỉ student. JSON — xem docs/04-contracts.md. */
     public function uploadUrlAction(): JsonModel
     {
-        if ($this->currentRole() !== 'student') {
+        if ($this->currentRole() !== UserModel::ROLE_STUDENT) {
             return $this->jsonError(403, 'Chỉ học sinh được nộp bài.');
         }
         if (!$this->getRequest()->isPost()) {
@@ -253,7 +254,7 @@ class AssignmentController extends BaseController
     /** Bước 3/3 nộp video: xác nhận đã upload xong → tạo submission. Chỉ student. */
     public function uploadDoneAction(): JsonModel
     {
-        if ($this->currentRole() !== 'student') {
+        if ($this->currentRole() !== UserModel::ROLE_STUDENT) {
             return $this->jsonError(403, 'Chỉ học sinh được nộp bài.');
         }
         if (!$this->getRequest()->isPost()) {
@@ -283,7 +284,7 @@ class AssignmentController extends BaseController
 
     private function assertTeacher(): void
     {
-        if ($this->currentRole() !== 'teacher') {
+        if ($this->currentRole() !== UserModel::ROLE_TEACHER) {
             throw new AccessDeniedException('Chỉ giáo viên được tạo/sửa bài tập.');
         }
     }
@@ -369,7 +370,7 @@ class AssignmentController extends BaseController
         $classrooms = array_values(array_filter(
             $this->classroomService->listRowsForActor(
                 (int) $this->currentUserId(),
-                (string) $this->currentRole(),
+                (int) $this->currentRole(),
             ),
             static fn (array $classroom): bool => $classroom['status'] === 'active',
         ));
@@ -381,6 +382,9 @@ class AssignmentController extends BaseController
             'values'     => $values,
             'errors'     => $errors,
             'quizJson'   => $quizJson,
+            // Giáo viên không phải giáo viên tiếng Anh thì không thấy lựa chọn "Video";
+            // AssignmentSaveFilter vẫn chặn lại nếu ai đó sửa HTML.
+            'canAssignVideo' => $this->assignmentService->canAssignVideo((int) $this->currentUserId()),
             // Chỉ lớp đang hoạt động do giáo viên phụ trách; Service vẫn kiểm lại khi lưu.
             'classrooms' => $classrooms,
         ]);

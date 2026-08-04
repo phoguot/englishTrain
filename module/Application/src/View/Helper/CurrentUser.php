@@ -11,6 +11,7 @@ use User\Service\UserService;
 /**
  * Cho layout/navbar biết ai đang đăng nhập mà view không phải gọi Service trực tiếp.
  * Trả null nếu chưa đăng nhập, ngược lại: ['id','role','name','csrfToken'].
+ * `role` là TINYINT (`UserModel::ROLE_*`) — view so bằng hằng, không so chuỗi.
  */
 class CurrentUser extends AbstractHelper
 {
@@ -20,7 +21,7 @@ class CurrentUser extends AbstractHelper
     ) {
     }
 
-    /** @return array{id:int,role:string,name:string,csrfToken:string}|null */
+    /** @return array{id:int,role:int,name:string,csrfToken:string}|null */
     public function __invoke(): ?array
     {
         $id = $this->auth->currentUserId();
@@ -32,7 +33,7 @@ class CurrentUser extends AbstractHelper
 
         return [
             'id'   => $id,
-            'role' => (string) $this->auth->currentRole(),
+            'role' => (int) $this->auth->currentRole(),
             'name' => $dto?->fullName ?? '',
             'csrfToken' => $this->auth->csrfToken(),
         ];

@@ -8,6 +8,7 @@ use Application\Exception\AccessDeniedException;
 use Application\Service\SystemLogService;
 use Laminas\Http\Response;
 use Laminas\View\Model\ViewModel;
+use User\Model\User\UserModel;
 
 /**
  * Trang tra cứu lỗi hệ thống (bảng `system_log`) — chỉ admin.
@@ -16,7 +17,7 @@ use Laminas\View\Model\ViewModel;
  */
 class SystemLogController extends BaseController
 {
-    protected const ALLOWED_ROLES = ['admin'];
+    protected const ALLOWED_ROLES = [UserModel::ROLE_ADMIN];
 
     private const LIMIT = 100;
 

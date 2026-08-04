@@ -28,7 +28,7 @@ use Laminas\Validator\StringLength;
  */
 class SessionSaveFilter extends InputFilter
 {
-    public function __construct(ClassroomService $classroomService, int $teacherId, string $role)
+    public function __construct(ClassroomService $classroomService, int $teacherId, int $role)
     {
         $classroomIds = array_map(
             static fn (array $row): int => (int) $row['id'],

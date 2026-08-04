@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Attendance\Service;
 
+use Application\Exception\AccessDeniedException;
 use Attendance\Model\AttendanceRecord\AttendanceRecordMapper;
 use Attendance\Model\AttendanceRecord\AttendanceRecordModel;
 use Attendance\Model\AttendanceSession\AttendanceSessionMapper;
 use Attendance\Model\AttendanceSession\AttendanceSessionModel;
 use Classroom\Service\ClassroomService;
+use User\Model\User\UserModel;
 use User\Service\UserService;
 
 /**
@@ -18,8 +20,8 @@ use User\Service\UserService;
  * = `attendance_session.fee_per_session` nếu record của em đó `isPaid()`, ngược lại 0.
  * Quy tắc "trạng thái nào tính tiền" khai duy nhất ở `AttendanceRecordModel::PAID_STATUSES`.
  *
- * Quyền: đi qua ClassroomAccessGuard (admin mọi lớp, teacher lớp mình). Student **không** xem
- * được trang tiền — chặn ở TuitionController.
+ * Quyền: **chỉ giáo viên phụ trách lớp**. Student và cả admin đều không xem được — chặn ở
+ * TuitionController (ALLOWED_ROLES) và kiểm lại trong monthlyTuition().
  *
  * Xem module/Attendance/CLAUDE.md.
  */
@@ -55,8 +57,15 @@ class TuitionService
      *     grandTotal: float
      * }
      */
-    public function monthlyTuition(int $classroomId, string $month, int $userId, string $role): array
+    public function monthlyTuition(int $classroomId, string $month, int $userId, int $role): array
     {
+        // Học phí chỉ là việc của giáo viên đứng lớp: admin cũng không xem được (khác điểm danh,
+        // nơi ClassroomAccessGuard cho admin xem mọi lớp). Kiểm lại tại đây, không chỉ dựa vào
+        // ALLOWED_ROLES của TuitionController.
+        if ($role !== UserModel::ROLE_TEACHER) {
+            throw new AccessDeniedException('Chỉ giáo viên phụ trách lớp mới xem được thống kê học phí.');
+        }
+
         $classroom = $this->accessGuard->assertCanView($classroomId, $userId, $role);
 
         [$normalizedMonth, $from, $to] = $this->monthRange($month);

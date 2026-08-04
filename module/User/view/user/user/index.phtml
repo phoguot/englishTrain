@@ -7,7 +7,10 @@
  * @var int $currentUserId
  * @var string $csrfToken
  */
-$roleLabels = ['admin' => 'Quản trị', 'teacher' => 'Giáo viên', 'student' => 'Học sinh'];
+
+use User\Model\User\UserModel;
+
+$roleLabels = UserModel::ROLE_LABELS;
 ?>
 <div class="page-head">
     <div class="page-head__copy"><p class="eyebrow">Quản trị</p><h1>Tài khoản.</h1><p>Tạo và quản lý người dùng trong hệ thống.</p></div>

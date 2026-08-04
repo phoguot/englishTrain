@@ -14,6 +14,7 @@ use Classroom\Service\ClassroomService;
 use Report\Filter\StudentReport\StudentReportSaveFilter;
 use Report\Model\StudentReport\StudentReportMapper;
 use Report\Model\StudentReport\StudentReportModel;
+use User\Model\User\UserModel;
 use User\Service\UserService;
 
 class ReportService
@@ -88,7 +89,7 @@ class ReportService
     private function buildComposerData(int $studentId, ClassroomDto $classroom, string $periodLabel): array
     {
         $student = $this->userService->find($studentId);
-        if ($student === null || $student->role !== 'student') {
+        if ($student === null || $student->role !== UserModel::ROLE_STUDENT) {
             throw new NotFoundException('Học sinh không tồn tại.');
         }
 
@@ -173,7 +174,7 @@ class ReportService
     public function listPublishedForStudent(int $studentId): array
     {
         $student = $this->userService->find($studentId);
-        if ($student === null || $student->role !== 'student') {
+        if ($student === null || $student->role !== UserModel::ROLE_STUDENT) {
             throw new NotFoundException('Học sinh không tồn tại.');
         }
         $reports = $this->reportMapper->searchPublishedForStudent($studentId);

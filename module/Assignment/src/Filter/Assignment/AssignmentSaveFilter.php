@@ -13,17 +13,35 @@ use Laminas\Validator\Date;
 use Laminas\Validator\InArray;
 use Laminas\Validator\NotEmpty;
 use Laminas\Validator\StringLength;
+use User\Model\User\UserModel;
+use User\Service\UserService;
 
 /**
  * Validate form tạo/sửa bài tập. Dùng chung create + update (id optional).
  * classroom_id kiểm thuộc quyền teacher ở Controller (giống ClassroomController::handleSave()
  * kiểm teacher_id) — InputFilter chỉ kiểm là số dương.
  * quiz_json KHÔNG validate ở đây — cấu trúc động nhiều câu hỏi, xem QuizJsonBuilder.
+ * Tập `type` hợp lệ phụ thuộc loại giáo viên (haystack dựng từ UserService, giống ClassroomSaveFilter):
+ * giáo viên `general` không có lựa chọn `video`.
  */
 class AssignmentSaveFilter extends InputFilter
 {
-    public function __construct()
+    /**
+     * @param UserService $userService để dựng haystack loại bài theo loại giáo viên
+     * @param int $teacherId giáo viên đang tạo/sửa bài — chỉ giáo viên tiếng Anh mới có loại `video`
+     * @param string|null $currentType loại của bài đang sửa (null khi tạo mới). Giữ nguyên trong
+     *        haystack để giáo viên đã bị chuyển sang `general` vẫn sửa được bài video cũ của mình.
+     */
+    public function __construct(UserService $userService, int $teacherId, ?string $currentType = null)
     {
+        $allowedTypes = [AssignmentModel::TYPE_QUIZ, AssignmentModel::TYPE_ESSAY];
+        if (
+            $userService->find($teacherId)?->canAssignVideo() === true
+            || $currentType === AssignmentModel::TYPE_VIDEO
+        ) {
+            $allowedTypes[] = AssignmentModel::TYPE_VIDEO;
+        }
+
         $this->add(['name' => 'id', 'required' => false, 'filters' => [['name' => ToInt::class]]]);
 
         $this->add([
@@ -58,8 +76,10 @@ class AssignmentSaveFilter extends InputFilter
                 [
                     'name'    => InArray::class,
                     'options' => [
-                        'haystack' => [AssignmentModel::TYPE_VIDEO, AssignmentModel::TYPE_QUIZ, AssignmentModel::TYPE_ESSAY],
-                        'messages' => [InArray::NOT_IN_ARRAY => 'Loại bài tập không hợp lệ.'],
+                        'haystack' => $allowedTypes,
+                        'messages' => [
+                            InArray::NOT_IN_ARRAY => 'Loại bài tập không hợp lệ. Bài dạng video chỉ dành cho giáo viên tiếng Anh.',
+                        ],
                     ],
                 ],
             ],

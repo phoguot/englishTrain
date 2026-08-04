@@ -15,6 +15,7 @@ use Laminas\Validator\InArray;
 use Laminas\Validator\LessThan;
 use Laminas\Validator\NotEmpty;
 use Laminas\Validator\StringLength;
+use User\Model\User\UserModel;
 use User\Service\UserService;
 
 /**
@@ -29,7 +30,7 @@ class ClassroomSaveFilter extends InputFilter
     {
         $teacherIds = array_map(
             static fn ($teacher): int => $teacher->id,
-            $userService->findByRole('teacher'),
+            $userService->findByRole(UserModel::ROLE_TEACHER),
         );
 
         $this->add([

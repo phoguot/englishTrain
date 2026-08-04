@@ -219,6 +219,7 @@ return [
                     $c->get(SubmissionMapper::class),
                     $c->get(ClassroomService::class),
                     $c->get(QuizJsonBuilder::class),
+                    $c->get(UserService::class),
                 ),
             SubmissionService::class => static fn (ContainerInterface $c): SubmissionService
                 => new SubmissionService(

@@ -38,10 +38,15 @@ use User\Service\UserService;
  */
 abstract class BaseController extends AbstractActionController
 {
-    public const ROLE_GUEST = 'guest';
-    public const ROLE_ANY = '*';
+    /**
+     * Vai trò thật nằm ở `UserModel::ROLE_*` (TINYINT, khớp cột `user.role`).
+     * 2 hằng dưới đây là **giả vai trò** dùng riêng cho ALLOWED_ROLES, cố ý mang giá trị âm/0
+     * để không bao giờ đụng mã vai trò thật trong DB.
+     */
+    public const ROLE_GUEST = 0;  // controller công khai — không cần đăng nhập
+    public const ROLE_ANY   = -1; // đã đăng nhập là được, không phân biệt vai trò
 
-    /** @var string[] Controller con override. Rỗng = deny (403). */
+    /** @var int[] Controller con override bằng UserModel::ROLE_*. Rỗng = deny (403). */
     protected const ALLOWED_ROLES = [];
 
     protected AuthService $authService;
@@ -285,7 +290,8 @@ abstract class BaseController extends AbstractActionController
         return $this->authService->currentUserId();
     }
 
-    protected function currentRole(): ?string
+    /** Vai trò đang đăng nhập — `UserModel::ROLE_*`, null nếu chưa đăng nhập. */
+    protected function currentRole(): ?int
     {
         return $this->authService->currentRole();
     }

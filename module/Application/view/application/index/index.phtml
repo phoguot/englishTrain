@@ -1,7 +1,7 @@
 <?php
 /**
  * @var Laminas\View\Renderer\PhpRenderer $this
- * @var string $role
+ * @var int $role vai trò TINYINT — UserModel::ROLE_*
  * @var int $userId
  * @var string $fullName
  * @var array<int, array<string,mixed>> $classrooms
@@ -10,10 +10,12 @@
  * @var array<int,array<string,mixed>> $upcomingAssignments
  * @var array<int,array<string,mixed>> $gradedAssignments
  */
+use User\Model\User\UserModel;
+
 $headings = [
-    'admin'   => ['Hệ thống', 'Toàn cảnh trung tâm.', 'Theo dõi các lớp và đi thẳng đến công việc cần xử lý.'],
-    'teacher' => ['Không gian giáo viên', 'Chào ' . $fullName . '.', 'Lớp học, bài tập và điểm danh ở cùng một nhịp.'],
-    'student' => ['Không gian học sinh', 'Chào ' . $fullName . '.', 'Mở lớp của em để xem bài tập và theo dõi chuyên cần.'],
+    UserModel::ROLE_ADMIN   => ['Hệ thống', 'Toàn cảnh trung tâm.', 'Theo dõi các lớp và đi thẳng đến công việc cần xử lý.'],
+    UserModel::ROLE_TEACHER => ['Không gian giáo viên', 'Chào ' . $fullName . '.', 'Lớp học, bài tập và điểm danh ở cùng một nhịp.'],
+    UserModel::ROLE_STUDENT => ['Không gian học sinh', 'Chào ' . $fullName . '.', 'Mở lớp của em để xem bài tập và theo dõi chuyên cần.'],
 ];
 [$eyebrow, $heading, $lede] = $headings[$role] ?? ['Study Lab', 'Chào bạn.', ''];
 $formatDate = static function (?string $value): string {
@@ -29,7 +31,7 @@ $formatDate = static function (?string $value): string {
         <h1><?= $this->escapeHtml($heading) ?></h1>
         <p><?= $this->escapeHtml($lede) ?></p>
     </div>
-    <?php if (in_array($role, ['admin', 'teacher'], true)): ?>
+    <?php if (in_array($role, [UserModel::ROLE_ADMIN, UserModel::ROLE_TEACHER], true)): ?>
         <div class="page-actions">
             <a class="btn" href="<?= $this->url('classrooms') ?>">Mở danh sách lớp</a>
         </div>
@@ -37,7 +39,7 @@ $formatDate = static function (?string $value): string {
 </div>
 
 <section class="stat-strip" aria-label="Tổng quan nhanh">
-    <?php if ($role === 'admin'): ?>
+    <?php if ($role === UserModel::ROLE_ADMIN): ?>
         <?php foreach (['classrooms' => 'Lớp học', 'teachers' => 'Giáo viên active', 'students' => 'Học sinh active'] as $key => $label): ?>
             <div class="stat">
                 <span class="stat__value" data-counter="<?= (int) ($adminStats[$key] ?? 0) ?>" data-pad="2"><?= str_pad((string) ($adminStats[$key] ?? 0), 2, '0', STR_PAD_LEFT) ?></span>
@@ -47,18 +49,18 @@ $formatDate = static function (?string $value): string {
     <?php else: ?>
         <div class="stat">
             <span class="stat__value" data-counter="<?= count($classrooms) ?>" data-pad="2"><?= str_pad((string) count($classrooms), 2, '0', STR_PAD_LEFT) ?></span>
-            <span class="stat__label"><?= $role === 'student' ? 'Lớp đang học' : 'Lớp phụ trách' ?></span>
+            <span class="stat__label"><?= $role === UserModel::ROLE_STUDENT ? 'Lớp đang học' : 'Lớp phụ trách' ?></span>
         </div>
         <div class="stat">
-            <span class="stat__value" data-counter="<?= $role === 'teacher' ? count($pendingAssignments) : count($upcomingAssignments) ?>" data-pad="2">
-                <?= str_pad((string) ($role === 'teacher' ? count($pendingAssignments) : count($upcomingAssignments)), 2, '0', STR_PAD_LEFT) ?>
+            <span class="stat__value" data-counter="<?= $role === UserModel::ROLE_TEACHER ? count($pendingAssignments) : count($upcomingAssignments) ?>" data-pad="2">
+                <?= str_pad((string) ($role === UserModel::ROLE_TEACHER ? count($pendingAssignments) : count($upcomingAssignments)), 2, '0', STR_PAD_LEFT) ?>
             </span>
-            <span class="stat__label"><?= $role === 'teacher' ? 'Bài cần chấm' : 'Bài sắp đến hạn' ?></span>
+            <span class="stat__label"><?= $role === UserModel::ROLE_TEACHER ? 'Bài cần chấm' : 'Bài sắp đến hạn' ?></span>
         </div>
     <?php endif; ?>
 </section>
 
-<?php if ($role === 'teacher'): ?>
+<?php if ($role === UserModel::ROLE_TEACHER): ?>
     <section class="panel mt-xl">
         <div class="panel__head"><h2>Bài chờ chấm</h2><span class="panel__meta"><?= count($pendingAssignments) ?>/5 bài gần nhất</span></div>
         <?php if ($pendingAssignments === []): ?>
@@ -82,7 +84,7 @@ $formatDate = static function (?string $value): string {
     </section>
 <?php endif; ?>
 
-<?php if ($role === 'student'): ?>
+<?php if ($role === UserModel::ROLE_STUDENT): ?>
     <div class="dashboard-grid mt-xl">
         <section class="panel">
             <div class="panel__head"><h2>Bài sắp đến hạn</h2><span class="panel__meta"><?= count($upcomingAssignments) ?>/5 bài</span></div>
@@ -117,7 +119,7 @@ $formatDate = static function (?string $value): string {
     <section class="panel panel--tint">
         <div class="panel__head"><h2>Chưa có lớp học</h2></div>
         <p class="muted">
-            <?= $role === 'student'
+            <?= $role === UserModel::ROLE_STUDENT
                 ? 'Em chưa được xếp vào lớp nào. Hãy liên hệ giáo viên hoặc trung tâm.'
                 : 'Danh sách lớp hiện đang trống.' ?>
         </p>
@@ -137,18 +139,18 @@ $formatDate = static function (?string $value): string {
                         Giáo viên: <?= $this->escapeHtml($classroom['teacherName']) ?>
                     </p>
                     <div class="button-row mt-lg">
-                        <?php if ($role !== 'admin'): ?>
+                        <?php if ($role !== UserModel::ROLE_ADMIN): ?>
                             <a class="btn" href="<?= $this->url('assignments', [], ['query' => ['classroom' => $classroom['id']]]) ?>">
                                 Xem bài tập
                             </a>
                         <?php endif; ?>
-                        <?php if (in_array($role, ['admin', 'teacher'], true)): ?>
+                        <?php if (in_array($role, [UserModel::ROLE_ADMIN, UserModel::ROLE_TEACHER], true)): ?>
                             <a class="btn btn--outline"
                                href="<?= $this->url('attendance', [], ['query' => ['classroom' => $classroom['id']]]) ?>">
                                 Điểm danh
                             </a>
                         <?php endif; ?>
-                        <?php if ($role === 'teacher'): ?>
+                        <?php if ($role === UserModel::ROLE_TEACHER): ?>
                             <a class="btn btn--quiet" href="<?= $this->url('reports', [], ['query' => ['classroom' => $classroom['id']]]) ?>">Report</a>
                         <?php endif; ?>
                     </div>
@@ -158,7 +160,7 @@ $formatDate = static function (?string $value): string {
     </section>
 <?php endif; ?>
 
-<?php if ($role === 'student'): ?>
+<?php if ($role === UserModel::ROLE_STUDENT): ?>
     <?php if ($userId > 0): ?>
         <section class="panel panel--ink mt-lg">
             <div class="panel__head"><h2>Chuyên cần của em</h2></div>

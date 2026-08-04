@@ -6,6 +6,7 @@ namespace Application\Service;
 
 use Assignment\Service\AssignmentService;
 use Classroom\Service\ClassroomService;
+use User\Model\User\UserModel;
 use User\Service\UserService;
 
 /** Tổng hợp dashboard qua hợp đồng public của các module, không query DB trực tiếp. */
@@ -19,12 +20,12 @@ class DashboardService
     }
 
     /** @return array<string,mixed> */
-    public function forActor(int $userId, string $role): array
+    public function forActor(int $userId, int $role): array
     {
         $user = $this->userService->find($userId);
         $classrooms = match ($role) {
-            'student' => $this->classroomService->listForStudent($userId),
-            'teacher', 'admin' => $this->classroomService->listRowsForActor($userId, $role),
+            UserModel::ROLE_STUDENT => $this->classroomService->listForStudent($userId),
+            UserModel::ROLE_TEACHER, UserModel::ROLE_ADMIN => $this->classroomService->listRowsForActor($userId, $role),
             default => [],
         };
 
@@ -39,15 +40,15 @@ class DashboardService
             'gradedAssignments' => [],
         ];
 
-        if ($role === 'admin') {
+        if ($role === UserModel::ROLE_ADMIN) {
             $data['adminStats'] = [
                 'classrooms' => count($classrooms),
-                'teachers' => count($this->userService->findByRole('teacher')),
-                'students' => count($this->userService->findByRole('student')),
+                'teachers' => count($this->userService->findByRole(UserModel::ROLE_TEACHER)),
+                'students' => count($this->userService->findByRole(UserModel::ROLE_STUDENT)),
             ];
-        } elseif ($role === 'teacher') {
+        } elseif ($role === UserModel::ROLE_TEACHER) {
             $data['pendingAssignments'] = $this->assignmentService->dashboardForTeacher($userId);
-        } elseif ($role === 'student') {
+        } elseif ($role === UserModel::ROLE_STUDENT) {
             $studentData = $this->assignmentService->dashboardForStudent($userId);
             $data['upcomingAssignments'] = $studentData['upcoming'];
             $data['gradedAssignments'] = $studentData['graded'];

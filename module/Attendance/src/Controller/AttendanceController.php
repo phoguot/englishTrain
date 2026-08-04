@@ -11,6 +11,7 @@ use Attendance\Model\AttendanceRecord\AttendanceRecordModel;
 use Attendance\Service\AttendanceService;
 use Classroom\Service\ClassroomService;
 use Laminas\View\Model\ViewModel;
+use User\Model\User\UserModel;
 
 /**
  * Buổi học + điểm danh + lịch sử chuyên cần.
@@ -26,7 +27,7 @@ use Laminas\View\Model\ViewModel;
  */
 class AttendanceController extends BaseController
 {
-    protected const ALLOWED_ROLES = ['admin', 'teacher', 'student'];
+    protected const ALLOWED_ROLES = [UserModel::ROLE_ADMIN, UserModel::ROLE_TEACHER, UserModel::ROLE_STUDENT];
 
     public function __construct(
         private readonly AttendanceService $attendanceService,
@@ -45,7 +46,7 @@ class AttendanceController extends BaseController
         $data = $this->attendanceService->listSessionRows(
             $classroomId,
             (int) $this->currentUserId(),
-            (string) $this->currentRole(),
+            (int) $this->currentRole(),
         );
 
         $model = $this->getViewModel();
@@ -54,7 +55,9 @@ class AttendanceController extends BaseController
             'classroomName' => $data['classroom']->name,
             'sessions'      => $data['rows'],
             // Lớp lưu trữ là chỉ đọc với cả giáo viên. Chặn thật nằm ở Service.
-            'canEdit'       => $this->currentRole() === 'teacher' && !$data['classroom']->isArchived(),
+            'canEdit'       => $this->currentRole() === UserModel::ROLE_TEACHER && !$data['classroom']->isArchived(),
+            // Trang học phí chỉ dành cho giáo viên — admin xem điểm danh nhưng không xem tiền.
+            'canViewTuition' => $this->currentRole() === UserModel::ROLE_TEACHER,
         ]);
 
         return $model;
@@ -89,7 +92,7 @@ class AttendanceController extends BaseController
 
         $sessionId = (int) $this->params()->fromRoute('sessionId', 0);
         $userId    = (int) $this->currentUserId();
-        $role      = (string) $this->currentRole();
+        $role      = (int) $this->currentRole();
 
         // Lấy buổi trước cả khi POST: ô chọn lớp bị disable nên POST không gửi classroom_id,
         // mà form lỗi vẫn cần biết lớp để dựng link "Quay lại".
@@ -136,7 +139,7 @@ class AttendanceController extends BaseController
 
         $sessionId = (int) $this->params()->fromRoute('sessionId', 0);
         $userId    = (int) $this->currentUserId();
-        $role      = (string) $this->currentRole();
+        $role      = (int) $this->currentRole();
 
         if ($this->getRequest()->isPost()) {
             try {
@@ -165,7 +168,7 @@ class AttendanceController extends BaseController
     }
 
     /** @param array<string,mixed> $values @param array<string,string> $errors */
-    private function markView(int $sessionId, int $userId, string $role, array $values = [], array $errors = []): ViewModel
+    private function markView(int $sessionId, int $userId, int $role, array $values = [], array $errors = []): ViewModel
     {
         $sheet = $this->attendanceService->getSheet($sessionId, $userId, $role);
 
@@ -178,7 +181,7 @@ class AttendanceController extends BaseController
             'statuses'      => AttendanceRecordModel::STATUSES,
             'labels'        => AttendanceRecordModel::LABELS,
             // admin chỉ xem, lớp lưu trữ chỉ đọc: ẩn nút Lưu cho đỡ rối. Chặn thật nằm ở Service.
-            'canEdit'       => $role === 'teacher' && !$sheet['classroom']->isArchived(),
+            'canEdit'       => $role === UserModel::ROLE_TEACHER && !$sheet['classroom']->isArchived(),
             'paidCount'     => $sheet['paidCount'],
             'totalAmount'   => $sheet['totalAmount'],
             'sheetValues' => $values,
@@ -202,7 +205,7 @@ class AttendanceController extends BaseController
 
         $sessionId = (int) $this->params()->fromRoute('sessionId', 0);
         $userId    = (int) $this->currentUserId();
-        $role      = (string) $this->currentRole();
+        $role      = (int) $this->currentRole();
 
         // Lấy trước để còn biết quay về lớp nào khi Service từ chối xóa.
         $session = $this->attendanceService->getSessionForEdit($sessionId, $userId, $role)['session'];
@@ -233,7 +236,7 @@ class AttendanceController extends BaseController
             $studentId,
             $classroomId > 0 ? $classroomId : null,
             (int) $this->currentUserId(),
-            (string) $this->currentRole(),
+            (int) $this->currentRole(),
         );
 
         $model = $this->getViewModel();
@@ -242,7 +245,7 @@ class AttendanceController extends BaseController
             'summary'     => $history['summary'],
             'rows'        => $history['rows'],
             'classroomId' => $classroomId,
-            'isOwnPage'   => $this->currentRole() === 'student',
+            'isOwnPage'   => $this->currentRole() === UserModel::ROLE_STUDENT,
         ]);
 
         return $model;
@@ -253,7 +256,7 @@ class AttendanceController extends BaseController
     /** Màn hình quản lý điểm danh: admin + teacher xem được, student thì không. */
     private function assertNotStudent(): void
     {
-        if ($this->currentRole() === 'student') {
+        if ($this->currentRole() === UserModel::ROLE_STUDENT) {
             throw new AccessDeniedException('Bạn không có quyền xem trang này.');
         }
     }
@@ -261,7 +264,7 @@ class AttendanceController extends BaseController
     /** Đường GHI: chỉ teacher. Service kiểm lại kèm quyền sở hữu lớp. */
     private function assertTeacher(): void
     {
-        if ($this->currentRole() !== 'teacher') {
+        if ($this->currentRole() !== UserModel::ROLE_TEACHER) {
             throw new AccessDeniedException('Chỉ giáo viên được điểm danh.');
         }
     }
@@ -274,7 +277,7 @@ class AttendanceController extends BaseController
             $session = $this->attendanceService->createSession(
                 $post,
                 (int) $this->currentUserId(),
-                (string) $this->currentRole(),
+                (int) $this->currentRole(),
             );
         } catch (ValidationException $e) {
             return $this->formView($post, $e->getErrors());
@@ -311,7 +314,7 @@ class AttendanceController extends BaseController
             // Chỉ lớp giáo viên phụ trách — sở hữu vẫn được Service kiểm lại khi lưu.
             'classrooms' => $this->classroomService->listRowsForActor(
                 (int) $this->currentUserId(),
-                (string) $this->currentRole(),
+                (int) $this->currentRole(),
             ),
         ]);
         $model->setTemplate('attendance/attendance/form');

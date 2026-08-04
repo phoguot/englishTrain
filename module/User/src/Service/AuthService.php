@@ -61,7 +61,7 @@ class AuthService
             return false;
         }
 
-        $this->establishSession((int) $user->getId(), (string) $user->getRole());
+        $this->establishSession((int) $user->getId(), (int) $user->getRole());
 
         return true;
     }
@@ -79,7 +79,7 @@ class AuthService
         if ($user === null || !$user->isActive()) {
             return false;
         }
-        $this->establishSession((int) $user->getId(), (string) $user->getRole());
+        $this->establishSession((int) $user->getId(), (int) $user->getRole());
 
         return true;
     }
@@ -95,9 +95,10 @@ class AuthService
         return isset($this->session->user_id) ? (int) $this->session->user_id : null;
     }
 
-    public function currentRole(): ?string
+    /** Vai trò đang đăng nhập — `UserModel::ROLE_*` (TINYINT), null nếu chưa đăng nhập. */
+    public function currentRole(): ?int
     {
-        return isset($this->session->role) ? (string) $this->session->role : null;
+        return isset($this->session->role) ? (int) $this->session->role : null;
     }
 
     public function csrfToken(): string
@@ -136,7 +137,7 @@ class AuthService
         return false;
     }
 
-    private function establishSession(int $userId, string $role): void
+    private function establishSession(int $userId, int $role): void
     {
         SessionContainer::getDefaultManager()->regenerateId(true);
         unset($this->session->csrf_token);

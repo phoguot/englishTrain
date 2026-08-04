@@ -34,7 +34,7 @@ class ClassroomDeletionService
     /**
      * @throws ValidationException lớp còn dữ liệu lịch sử → nêu rõ còn những gì, bao nhiêu
      */
-    public function delete(int $id, int $userId, string $role): ClassroomModel
+    public function delete(int $id, int $userId, int $role): ClassroomModel
     {
         // Kiểm quyền TRƯỚC khi đếm: không để người ngoài dò được lớp có bao nhiêu buổi học.
         $classroom = $this->classroomService->getEditable($id, $userId, $role);

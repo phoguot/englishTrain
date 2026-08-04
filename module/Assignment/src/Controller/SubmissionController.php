@@ -11,6 +11,7 @@ use Application\Exception\ValidationException;
 use Assignment\Service\SubmissionService;
 use Laminas\View\Model\JsonModel;
 use Laminas\View\Model\ViewModel;
+use User\Model\User\UserModel;
 
 /**
  * Chấm điểm bài nộp + xin URL xem video. Chỉ teacher — Service kiểm sở hữu lớp chứa bài tập
@@ -18,7 +19,7 @@ use Laminas\View\Model\ViewModel;
  */
 class SubmissionController extends BaseController
 {
-    protected const ALLOWED_ROLES = ['teacher'];
+    protected const ALLOWED_ROLES = [UserModel::ROLE_TEACHER];
 
     public function __construct(private readonly SubmissionService $submissionService)
     {
@@ -44,7 +45,7 @@ class SubmissionController extends BaseController
             $model = $this->getViewModel();
             $model->setVariables([
                 'assignment' => $grading['assignment'],
-                'role' => 'teacher',
+                'role' => UserModel::ROLE_TEACHER,
                 'rows' => $grading['rows'],
                 'canEdit' => true,
                 'gradeSubmissionId' => $submissionId,

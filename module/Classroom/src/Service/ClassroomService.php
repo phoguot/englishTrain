@@ -14,6 +14,7 @@ use Classroom\Model\Classroom\ClassroomModel;
 use Classroom\Model\Classroom\ClassroomDto;
 use Classroom\Model\ClassroomStudent\ClassroomStudentMapper;
 use Laminas\Db\Adapter\Adapter;
+use User\Model\User\UserModel;
 use User\Service\UserService;
 
 /**
@@ -24,8 +25,6 @@ use User\Service\UserService;
  */
 class ClassroomService
 {
-    private const ROLE_ADMIN = 'admin';
-
     public function __construct(
         private readonly ClassroomMapper $classroomMapper,
         private readonly ClassroomStudentMapper $studentMapper,
@@ -92,9 +91,9 @@ class ClassroomService
      *
      * @return array<int, array{id:int,name:string,teacherName:string,studentCount:int,feePerSession:float,status:string}>
      */
-    public function listRowsForActor(int $userId, string $role): array
+    public function listRowsForActor(int $userId, int $role): array
     {
-        $classrooms = $role === self::ROLE_ADMIN
+        $classrooms = $role === UserModel::ROLE_ADMIN
             ? $this->classroomMapper->searchClassroom(null)
             : $this->classroomMapper->searchClassroom($userId);
 
@@ -161,7 +160,7 @@ class ClassroomService
     // ── Dùng nội bộ cho controller của module Classroom ─────────────────────
 
     /** Lấy lớp để sửa. NotFound nếu không có, AccessDenied nếu teacher không sở hữu. */
-    public function getEditable(int $id, int $userId, string $role): ClassroomModel
+    public function getEditable(int $id, int $userId, int $role): ClassroomModel
     {
         $classroom = $this->classroomMapper->getClassroom($id);
         if ($classroom === null) {
@@ -195,7 +194,7 @@ class ClassroomService
      * @param array<string,mixed> $data dữ liệu POST thô
      * @throws ValidationException
      */
-    public function update(int $id, array $data, int $userId, string $role): ClassroomModel
+    public function update(int $id, array $data, int $userId, int $role): ClassroomModel
     {
         $model  = $this->getEditable($id, $userId, $role);
         $values = $this->validate($data);
@@ -216,7 +215,7 @@ class ClassroomService
      * Quyền: admin xóa được mọi lớp; teacher chỉ lớp mình phụ trách (`getEditable()`).
      * Học sinh trong lớp **không** chặn xóa — đó là quan hệ, không phải dữ liệu lịch sử.
      */
-    public function delete(int $id, int $userId, string $role): ClassroomModel
+    public function delete(int $id, int $userId, int $role): ClassroomModel
     {
         $classroom = $this->getEditable($id, $userId, $role);
 
@@ -260,13 +259,13 @@ class ClassroomService
      *
      * @return array{classroom:ClassroomModel, students:\User\Model\User\UserDto[], memberIds:int[]}
      */
-    public function getManageStudentsData(int $id, int $userId, string $role): array
+    public function getManageStudentsData(int $id, int $userId, int $role): array
     {
         $classroom = $this->getEditable($id, $userId, $role);
 
         return [
             'classroom' => $classroom,
-            'students'  => $this->userService->findByRole('student'),
+            'students'  => $this->userService->findByRole(UserModel::ROLE_STUDENT),
             'memberIds' => $this->studentMapper->getStudentIds($id),
         ];
     }
@@ -277,7 +276,7 @@ class ClassroomService
      *
      * @param mixed $studentIds
      */
-    public function saveStudents(int $id, mixed $studentIds, int $userId, string $role): void
+    public function saveStudents(int $id, mixed $studentIds, int $userId, int $role): void
     {
         $classroom = $this->getEditable($id, $userId, $role);
 
@@ -287,7 +286,7 @@ class ClassroomService
 
         $validStudentIds = array_map(
             static fn ($dto): int => $dto->id,
-            $this->userService->findByRole('student'),
+            $this->userService->findByRole(UserModel::ROLE_STUDENT),
         );
         $filter = new ClassroomStudentsFilter($validStudentIds);
         $filter->setData(['student_ids' => $studentIds]);
@@ -310,9 +309,9 @@ class ClassroomService
 
     // ── Nội bộ ──────────────────────────────────────────────────────────────
 
-    private function assertCanManage(ClassroomModel $classroom, int $userId, string $role): void
+    private function assertCanManage(ClassroomModel $classroom, int $userId, int $role): void
     {
-        if ($role === self::ROLE_ADMIN) {
+        if ($role === UserModel::ROLE_ADMIN) {
             return;
         }
         if ((int) $classroom->getTeacherId() !== $userId) {

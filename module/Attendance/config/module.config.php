@@ -90,7 +90,7 @@ return [
                     ],
                 ],
             ],
-            // Học phí theo buổi dạy — chỉ admin + teacher (xem TuitionController).
+            // Học phí theo buổi dạy — CHỈ teacher, admin cũng không vào (xem TuitionController).
             'tuition' => [
                 'type'    => Literal::class,
                 'options' => [

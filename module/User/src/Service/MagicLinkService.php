@@ -10,6 +10,7 @@ use Application\Exception\ValidationException;
 use Laminas\Db\Adapter\Adapter;
 use Throwable;
 use User\Model\User\UserMapper;
+use User\Model\User\UserModel;
 use User\Model\UserLoginToken\UserLoginTokenMapper;
 use User\Model\UserLoginToken\UserLoginTokenModel;
 use User\Model\OAuthLinkThrottle\OAuthLinkThrottleMapper;
@@ -42,15 +43,15 @@ class MagicLinkService
      * kiểu `/login/<token>`. Không lưu token gốc, chỉ lưu SHA-256.
      *
      * Quyền (kiểm ở đây):
-     *  - admin  → tạo cho user role != 'admin', không tự tạo cho chính mình
-     *  - teacher → chỉ cho student (target role='student')
+     *  - admin  → tạo cho user không phải admin, không tự tạo cho chính mình
+     *  - teacher → chỉ cho học sinh (target role = UserModel::ROLE_STUDENT)
      *
      * Ràng buộc "teacher này có dạy student này không" thuộc kiến thức của module Classroom
      * (module User đứng dưới Classroom trong sơ đồ phụ thuộc — xem docs/04-contracts.md), nên
      * việc kiểm relationship đó do CONTROLLER phối hợp `ClassroomService::teachesStudent()`
      * TRƯỚC KHI gọi method này.
      */
-    public function create(int $targetUserId, int $creatorUserId, string $creatorRole): string
+    public function create(int $targetUserId, int $creatorUserId, int $creatorRole): string
     {
         if ($targetUserId <= 0) {
             throw new NotFoundException('Tài khoản không tồn tại.');
@@ -71,7 +72,7 @@ class MagicLinkService
                 throw new AccessDeniedException('Tài khoản đang bị khóa, không thể tạo link đăng nhập.');
             }
 
-            $this->assertCreatorMayIssueFor($creatorRole, (string) $user->getRole());
+            $this->assertCreatorMayIssueFor($creatorRole, (int) $user->getRole());
 
             $this->tokenMapper->revokeUnusedByUser($targetUserId);
 
@@ -129,10 +130,10 @@ class MagicLinkService
         return $userId;
     }
 
-    private function assertCreatorMayIssueFor(string $creatorRole, string $targetRole): void
+    private function assertCreatorMayIssueFor(int $creatorRole, int $targetRole): void
     {
-        if ($creatorRole === 'admin') {
-            if ($targetRole === 'admin') {
+        if ($creatorRole === UserModel::ROLE_ADMIN) {
+            if ($targetRole === UserModel::ROLE_ADMIN) {
                 // Admin khác tự đổi mật khẩu được — không dùng magic-link để leo/chiếm quyền admin.
                 throw new AccessDeniedException('Không tạo link đăng nhập cho tài khoản quản trị.');
             }
@@ -140,8 +141,8 @@ class MagicLinkService
             return;
         }
 
-        if ($creatorRole === 'teacher') {
-            if ($targetRole !== 'student') {
+        if ($creatorRole === UserModel::ROLE_TEACHER) {
+            if ($targetRole !== UserModel::ROLE_STUDENT) {
                 throw new AccessDeniedException('Giáo viên chỉ tạo link đăng nhập cho học sinh.');
             }
 

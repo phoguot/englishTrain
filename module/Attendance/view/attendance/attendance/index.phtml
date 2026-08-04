@@ -5,6 +5,7 @@
  * @var string $classroomName
  * @var array<int, array<string,mixed>> $sessions
  * @var bool $canEdit
+ * @var bool $canViewTuition chỉ giáo viên mới thấy nút sang trang học phí
  */
 ?>
 <div class="page-head">
@@ -19,9 +20,11 @@
                 Tạo buổi học
             </a>
         <?php endif; ?>
-        <a class="btn btn--outline" href="<?= $this->url('tuition', [], ['query' => ['classroom' => $classroomId]]) ?>">
-            Học phí tháng
-        </a>
+        <?php if ($canViewTuition): ?>
+            <a class="btn btn--outline" href="<?= $this->url('tuition', [], ['query' => ['classroom' => $classroomId]]) ?>">
+                Học phí tháng
+            </a>
+        <?php endif; ?>
         <a class="btn btn--outline" href="<?= $this->url('classrooms') ?>">Quay lại lớp</a>
     </div>
 </div>

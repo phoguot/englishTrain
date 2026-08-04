@@ -8,7 +8,11 @@
  * @var string $csrfToken
  * @var \User\Model\UserIdentity\UserIdentityModel[] $identities
  * @var array<string,string> $providerLabels
+ * @var array<int,string> $teacherTypeLabels mã loại giáo viên => nhãn tiếng Việt (UserModel::TEACHER_TYPE_*)
  */
+
+use User\Model\User\UserModel;
+
 $action = $isEdit ? $this->url('user_edit', ['id' => $editId]) : $this->url('user_create');
 ?>
 <div class="page-head">
@@ -18,7 +22,19 @@ $action = $isEdit ? $this->url('user_edit', ['id' => $editId]) : $this->url('use
 <form method="post" action="<?= $this->escapeHtmlAttr($action) ?>" class="panel form-grid">
     <input type="hidden" name="_csrf" value="<?= $this->escapeHtmlAttr($csrfToken) ?>">
     <div class="field"><label for="full_name">Họ tên</label><input class="field__control<?= isset($errors['full_name']) ? ' is-invalid' : '' ?>" id="full_name" name="full_name" maxlength="100" required value="<?= $this->escapeHtmlAttr((string) $values['full_name']) ?>"><?php if (isset($errors['full_name'])): ?><span class="invalid-feedback"><?= $this->escapeHtml($errors['full_name']) ?></span><?php endif; ?></div>
-    <div class="field"><label for="role">Vai trò</label><select class="field__control<?= isset($errors['role']) ? ' is-invalid' : '' ?>" id="role" name="role" required><?php foreach (['admin' => 'Quản trị', 'teacher' => 'Giáo viên', 'student' => 'Học sinh'] as $value => $label): ?><option value="<?= $this->escapeHtmlAttr($value) ?>" <?= $values['role'] === $value ? 'selected' : '' ?>><?= $this->escapeHtml($label) ?></option><?php endforeach; ?></select><?php if (isset($errors['role'])): ?><span class="invalid-feedback"><?= $this->escapeHtml($errors['role']) ?></span><?php endif; ?></div>
+    <div class="field"><label for="role">Vai trò</label><select class="field__control<?= isset($errors['role']) ? ' is-invalid' : '' ?>" id="role" name="role" required><?php foreach (UserModel::ROLE_LABELS as $value => $label): ?><option value="<?= $this->escapeHtmlAttr((string) $value) ?>" <?= (int) $values['role'] === (int) $value ? 'selected' : '' ?>><?= $this->escapeHtml($label) ?></option><?php endforeach; ?></select><?php if (isset($errors['role'])): ?><span class="invalid-feedback"><?= $this->escapeHtml($errors['role']) ?></span><?php endif; ?></div>
+    <div class="field<?= (int) $values['role'] === UserModel::ROLE_TEACHER ? '' : ' d-none' ?>" data-teacher-type-field
+         data-teacher-role-value="<?= UserModel::ROLE_TEACHER ?>">
+        <label for="teacher_type">Loại giáo viên</label>
+        <select class="field__control<?= isset($errors['teacher_type']) ? ' is-invalid' : '' ?>" id="teacher_type" name="teacher_type">
+            <option value="">Chọn loại giáo viên</option>
+            <?php foreach ($teacherTypeLabels as $value => $label): ?>
+                <option value="<?= $this->escapeHtmlAttr((string) $value) ?>" <?= (string) $values['teacher_type'] === (string) $value ? 'selected' : '' ?>><?= $this->escapeHtml($label) ?></option>
+            <?php endforeach; ?>
+        </select>
+        <span class="field__help">Chỉ giáo viên tiếng Anh mới giao được bài tập dạng video.</span>
+        <?php if (isset($errors['teacher_type'])): ?><span class="invalid-feedback"><?= $this->escapeHtml($errors['teacher_type']) ?></span><?php endif; ?>
+    </div>
     <div class="field"><label for="username">Tên đăng nhập</label><input class="field__control<?= isset($errors['username']) ? ' is-invalid' : '' ?>" id="username" name="username" maxlength="50" required value="<?= $this->escapeHtmlAttr((string) $values['username']) ?>"><?php if (isset($errors['username'])): ?><span class="invalid-feedback"><?= $this->escapeHtml($errors['username']) ?></span><?php endif; ?></div>
     <div class="field"><label for="password">Mật khẩu<?= $isEdit ? ' mới' : '' ?></label><input class="field__control<?= isset($errors['password']) ? ' is-invalid' : '' ?>" id="password" name="password" type="password" autocomplete="new-password" <?= $isEdit ? '' : 'required' ?>><?php if ($isEdit): ?><span class="field__help">Để trống nếu không đổi mật khẩu.</span><?php endif; ?><?php if (isset($errors['password'])): ?><span class="invalid-feedback"><?= $this->escapeHtml($errors['password']) ?></span><?php endif; ?></div>
     <div class="field"><label for="email">Email</label><input class="field__control<?= isset($errors['email']) ? ' is-invalid' : '' ?>" id="email" name="email" type="email" maxlength="150" value="<?= $this->escapeHtmlAttr((string) $values['email']) ?>"><?php if (isset($errors['email'])): ?><span class="invalid-feedback"><?= $this->escapeHtml($errors['email']) ?></span><?php endif; ?></div>
@@ -57,7 +73,7 @@ $action = $isEdit ? $this->url('user_edit', ['id' => $editId]) : $this->url('use
             </div>
         <?php endif; ?>
     </section>
-    <?php if (($values['role'] ?? '') !== 'admin'): ?>
+    <?php if ((int) ($values['role'] ?? 0) !== UserModel::ROLE_ADMIN): ?>
     <section class="panel mt-4">
         <div class="panel__head"><h2>Link đăng nhập nhanh</h2></div>
         <p class="muted">Tạo một link đăng nhập gửi qua Zalo/SMS cho học sinh hoặc giáo viên. Người nhận bấm vào là vào thẳng, không cần gõ mật khẩu. Link dùng một lần, hết hạn sau 15 phút.</p>

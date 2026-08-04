@@ -10,6 +10,7 @@ use Application\Exception\NotFoundException;
 use Assignment\Service\SubmissionService;
 use Laminas\View\Model\JsonModel;
 use Laminas\View\Model\ViewModel;
+use User\Model\User\UserModel;
 use User\Service\UserService;
 
 /**
@@ -18,7 +19,7 @@ use User\Service\UserService;
  */
 class VideoAdminController extends BaseController
 {
-    protected const ALLOWED_ROLES = ['admin'];
+    protected const ALLOWED_ROLES = [UserModel::ROLE_ADMIN];
 
     public function __construct(
         private readonly SubmissionService $submissionService,
@@ -33,7 +34,7 @@ class VideoAdminController extends BaseController
         $model = $this->getViewModel();
         $model->setVariables([
             'videos'    => $this->submissionService->listVideoSubmissionsForAdmin($studentId),
-            'students'  => $this->userService->findByRole('student'),
+            'students'  => $this->userService->findByRole(UserModel::ROLE_STUDENT),
             'studentId' => $studentId,
         ]);
         $model->setTemplate('assignment/video-admin/index');

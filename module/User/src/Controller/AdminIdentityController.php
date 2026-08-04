@@ -7,13 +7,14 @@ namespace User\Controller;
 use Application\Controller\BaseController;
 use Application\Exception\AccessDeniedException;
 use Application\Exception\ValidationException;
+use User\Model\User\UserModel;
 use User\Service\UserIdentityService;
 use User\Service\UserLinkTokenService;
 use User\Service\UserService;
 
 class AdminIdentityController extends BaseController
 {
-    protected const ALLOWED_ROLES = ['admin'];
+    protected const ALLOWED_ROLES = [UserModel::ROLE_ADMIN];
 
     public function __construct(
         private readonly UserLinkTokenService $tokenService,

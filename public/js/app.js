@@ -77,6 +77,24 @@
     });
   });
 
+  // Form tài khoản: ô "Loại giáo viên" chỉ hiện khi vai trò là giáo viên.
+  // Server vẫn kiểm lại bằng UserSaveFilter — đây chỉ là tiện lợi cho người nhập.
+  (function () {
+    const roleSelect = document.getElementById('role');
+    const teacherTypeField = document.querySelector('[data-teacher-type-field]');
+    if (!roleSelect || !teacherTypeField) return;
+
+    const teacherTypeSelect = teacherTypeField.querySelector('select');
+    // Mã vai trò giáo viên do server nhúng vào (UserModel::ROLE_TEACHER) — JS không hardcode số.
+    const teacherRoleValue = teacherTypeField.dataset.teacherRoleValue || '';
+
+    roleSelect.addEventListener('change', function () {
+      const isTeacher = roleSelect.value === teacherRoleValue;
+      teacherTypeField.classList.toggle('d-none', !isTeacher);
+      if (!isTeacher && teacherTypeSelect) teacherTypeSelect.value = '';
+    });
+  })();
+
   // Trang log lỗi hệ thống: chọn tất cả + xác nhận xóa 1 dòng / xóa nhiều dòng đã chọn.
   document.querySelectorAll('form[data-log-form]').forEach(function (form) {
     const selectAll = form.querySelector('[data-log-select-all]');

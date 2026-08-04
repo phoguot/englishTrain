@@ -8,6 +8,7 @@ use Application\Exception\AccessDeniedException;
 use Application\Exception\NotFoundException;
 use Classroom\Model\Classroom\ClassroomDto;
 use Classroom\Service\ClassroomService;
+use User\Model\User\UserModel;
 
 /**
  * Quyền truy cập lớp trong module Attendance — MỘT bản luật duy nhất, dùng bởi
@@ -22,10 +23,6 @@ use Classroom\Service\ClassroomService;
  */
 class ClassroomAccessGuard
 {
-    public const ROLE_ADMIN   = 'admin';
-    public const ROLE_TEACHER = 'teacher';
-    public const ROLE_STUDENT = 'student';
-
     public function __construct(private readonly ClassroomService $classroomService)
     {
     }
@@ -36,10 +33,10 @@ class ClassroomAccessGuard
      * @throws NotFoundException lớp không tồn tại
      * @throws AccessDeniedException teacher không phụ trách lớp này
      */
-    public function assertCanView(int $classroomId, int $userId, string $role): ClassroomDto
+    public function assertCanView(int $classroomId, int $userId, int $role): ClassroomDto
     {
         $classroom = $this->findOrFail($classroomId);
-        if ($role === self::ROLE_ADMIN) {
+        if ($role === UserModel::ROLE_ADMIN) {
             return $classroom;
         }
         if (!$this->classroomService->isTeacherOf($userId, $classroomId)) {
@@ -58,10 +55,10 @@ class ClassroomAccessGuard
      *
      * @throws NotFoundException|AccessDeniedException
      */
-    public function assertCanEdit(int $classroomId, int $userId, string $role): ClassroomDto
+    public function assertCanEdit(int $classroomId, int $userId, int $role): ClassroomDto
     {
         $classroom = $this->findOrFail($classroomId);
-        if ($role !== self::ROLE_TEACHER || !$this->classroomService->isTeacherOf($userId, $classroomId)) {
+        if ($role !== UserModel::ROLE_TEACHER || !$this->classroomService->isTeacherOf($userId, $classroomId)) {
             throw new AccessDeniedException(
                 'Chỉ giáo viên phụ trách lớp mới thay đổi được buổi học và điểm danh của lớp này.',
             );
